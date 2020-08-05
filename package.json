@@ -1,0 +1,14 @@
+{
+  "name": "SC2_Replay_Bot",
+  "version": "1.0.0",
+  "main": "app.js",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "discord.js": "^12.2.0"
+  },
+  "devDependencies": {
+    "eslint": "^7.6.0",
+    "babel-eslint": "^10.1.0"
+  }
+}
