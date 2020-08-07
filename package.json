@@ -5,10 +5,11 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "discord.js": "^12.2.0"
+    "discord.js": "^12.2.0",
+    "mongoose": "^5.9.27"
   },
   "devDependencies": {
-    "eslint": "^7.6.0",
-    "babel-eslint": "^10.1.0"
+    "babel-eslint": "^10.1.0",
+    "eslint": "^7.6.0"
   }
 }
