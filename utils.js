@@ -5,8 +5,19 @@ export const shouldHandleMsg = msg => {
   if (msg.channel.name !== 'replays-1' && msg.channel.name !== 'replays-2') return false;
   return true;
 };
+
+export const POOLS = {};
+
+export const createPool = name => {
+  const Pool = function () {};
+  const result = new Pool();
+  POOLS[name] = result;
+  Pool.prototype.name = name;
+  return result;
+};
+
 const ticketFactory = (pool, id, content, url) => {
-  switch ([pool]) {
+  switch (pool.name) {
     case 'IS_REPLAY_POOL':
       return {
         id,
@@ -20,7 +31,7 @@ const ticketFactory = (pool, id, content, url) => {
         pool,
       };
     default:
-      console.error(new Error(`Wrong type (${[pool]}) provided.`));
+      console.error(new Error(`Wrong type (${pool.name}) provided.`));
   }
 };
 const timeOutHandler = (ticket, system) => {
@@ -35,7 +46,7 @@ const addToPool = (ticket, pool, timeOutAfter = 5 * 60 * 1000) => {
   ticket.pool = pool;
   pool[ticket.id] = ticket;
   const timeOutId = setTimeout(() => {
-    timeOutHandler(ticket, [pool]);
+    timeOutHandler(ticket, pool.name);
   }, timeOutAfter);
   ticket.timeOutId = timeOutId;
 };

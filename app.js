@@ -2,13 +2,14 @@ const client = new Discord.Client();
 
 const coaches = ['145856913014259712'];
 const dmPool = [];
-const IS_REPLAY_POOL = {};
-const POOLS = [IS_REPLAY_POOL];
+const IS_REPLAY_POOL = createPool('IS_REPLAY_POOL');
+console.log(IS_REPLAY_POOL);
+console.log(POOLS);
 
 const delFromAllPools = id => {
-  POOLS.forEach(pool => {
-    delete pool[id];
-  });
+  for (let poolName in POOLS) {
+    delete POOLS[poolName][id];
+  }
 };
 
 const delAllMsgs = async ({ DMIds, DMChannels }) => {
@@ -51,6 +52,7 @@ client.on('ready', () => console.log('Bot online'));
 
 client.on('messageReactionAdd', async msgReact => {
   // TODO: check wether message is a replayPool msg etc by looking through the reactionHistory.
+  const stageInFlow = msgReact;
   if (msgReact.count <= 1) return;
   // User has reacted
   switch (msgReact._emoji.name) {
@@ -70,8 +72,8 @@ client.on('message', async msg => {
   if (!shouldHandleMsg(msg)) return;
   await delAllMsgs({ DMIds: coaches });
   const attachments = Array.from(msg.attachments);
-  for (let i = 1; i < attachments.length; i += 2) {
-    const msgAttach = attachments[i];
+  for (let i = 0; i < attachments.length; i++) {
+    const msgAttach = attachments[i][1];
     const url = msgAttach?.url;
     if (url?.includes?.('SC2Replay') !== true) continue;
     const content = msg.content;
@@ -90,6 +92,6 @@ client.login(botKey);
 
 import { botKey } from './config/keys.js';
 import Discord, { DMChannel } from 'discord.js';
-import { sleep, shouldHandleMsg, buildTicket } from './utils.js';
+import { sleep, shouldHandleMsg, buildTicket, POOLS, createPool } from './utils.js';
 import { writeFileSync, readFileSync } from 'fs';
 import { confirmIsReplayMsg, isNotSC2Replay } from './messages.js';
