@@ -9,8 +9,23 @@ then please write a report and submit it to the upcoming bug-report channel :D`,
 };
 
 export const isNotSC2Replay = {
-  content: `Ok, if this has been a false positive, please report it :D. Other than
-that you don't have to do anything.
+  content: `Ok, if this has been a false positive, please report it :D.
+Other than that you don't have to do anything.
 
 Have a nice day !`,
+};
+
+export const isSC2Replay = coachNum => {
+  if (coachNum === undefined)
+    return 'Thank you for submitting, our coaches will take a look at it :D';
+  const singleCoach = coachNum === 1;
+  const coachStr =
+    // prettier-ignore
+    coachNum === 0
+      ? 'are no coaches online.\n They will be notified once they come online though :D'
+      : `${singleCoach ? 'is' : 'are'} ${coachNum} coach${singleCoach ? '' : 'es'} available.
+They have been notified :D`;
+  return {
+    content: `Thank you for submitting! Currently there ${coachStr}`,
+  };
 };
