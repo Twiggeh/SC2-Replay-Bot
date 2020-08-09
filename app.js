@@ -1,7 +1,6 @@
 const client = new Discord.Client();
 
 const coaches = ['145856913014259712'];
-const dmPool = [];
 const IS_REPLAY_POOL = createPool('IS_REPLAY_POOL');
 console.log(IS_REPLAY_POOL);
 console.log(POOLS);
@@ -50,20 +49,24 @@ const delAllMsgs = async ({ DMIds, DMChannels }) => {
 
 client.on('ready', () => console.log('Bot online'));
 
-client.on('messageReactionAdd', async msgReact => {
-  // TODO: check wether message is a replayPool msg etc by looking through the reactionHistory.
-  const stageInFlow = msgReact;
-  if (msgReact.count <= 1) return;
+client.on('messageReactionAdd', async (msgReact, user) => {
+  if (user.bot) return;
+  const msgInPool = isPartOfPool(msgReact.message.id);
+  // TODO : Lock the interaction down. Here I don't have to acknowledge that a message might have a history since IS_REPLAY_POOL has immediate consequences to a reaction.
   // User has reacted
-  switch (msgReact._emoji.name) {
-    case '✅': {
-      return;
-    }
-    case '🛑': {
-      await msgReact.message.channel.send(isNotSC2Replay);
-      await sleep(10 * 1000);
-      await delAllMsgs({ DMChannels: [msgReact.message.channel] });
-      return;
+  switch (msgInPool) {
+    case 'IS_REPLAY_POOL': {
+      switch (msgReact._emoji.name) {
+        case '✅': {
+          return;
+        }
+        case '🛑': {
+          await msgReact.message.channel.send(isNotSC2Replay);
+          await sleep(10 * 1000);
+          await delAllMsgs({ DMChannels: [msgReact.message.channel] });
+          return;
+        }
+      }
     }
   }
 });
@@ -95,3 +98,4 @@ import Discord, { DMChannel } from 'discord.js';
 import { sleep, shouldHandleMsg, buildTicket, POOLS, createPool } from './utils.js';
 import { writeFileSync, readFileSync } from 'fs';
 import { confirmIsReplayMsg, isNotSC2Replay } from './messages.js';
+import { isPartOfPool } from './utils.js';
