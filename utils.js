@@ -9,7 +9,16 @@ export const shouldHandleMsg = msg => {
 export const POOLS = {};
 
 export const createPool = name => {
-  const Pool = function () {};
+  class Pool {
+    add(ticket) {
+      this[ticket.id] = ticket;
+      return this;
+    }
+    remove(id) {
+      delete this[id];
+      return this;
+    }
+  }
   const result = new Pool();
   POOLS[name] = result;
   Pool.prototype.name = name;
