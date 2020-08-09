@@ -16,6 +16,14 @@ export const createPool = name => {
   return result;
 };
 
+export const isPartOfPool = id => {
+  for (let poolName in POOLS) {
+    const pool = POOLS[poolName];
+    if (pool[id] !== undefined) return poolName;
+  }
+  return false;
+};
+
 const ticketFactory = (pool, id, content, url) => {
   switch (pool.name) {
     case 'IS_REPLAY_POOL':
@@ -26,6 +34,7 @@ const ticketFactory = (pool, id, content, url) => {
         activatedAt: Date.now(),
         timedOut: 0,
         timeOutId: undefined,
+        emergency: false,
         content,
         url,
         pool,
