@@ -17,7 +17,7 @@ Have a nice day !`,
 
 export const isSC2Replay = coachNum => {
   if (coachNum === undefined)
-    return 'Thank you for submitting, our coaches will take a look at it :D';
+    return { content: 'Thank you for submitting, our coaches will take a look at it :D' };
   const singleCoach = coachNum === 1;
   const coachStr =
     // prettier-ignore
@@ -28,4 +28,9 @@ They have been notified :D`;
   return {
     content: `Thank you for submitting! Currently there ${coachStr}`,
   };
+};
+
+export const isSC2ReplayReminder = {
+  content:
+    "Hey!\n You haven't yet reacted to confirm wether or not your message contained a replay\n and was meant to be looked at by our coaches !",
 };
