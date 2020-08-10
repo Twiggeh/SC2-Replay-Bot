@@ -30,7 +30,7 @@ export const isPartOfPool = id => {
   }
   return false;
 };
-const ticketFactory = (pool, id, content, url) => {
+const ticketFactory = (pool, { id, content, url, origMsg }) => {
   switch (pool.name) {
     case 'IS_REPLAY_POOL':
       return {
@@ -42,6 +42,7 @@ const ticketFactory = (pool, id, content, url) => {
         timeOutId: undefined,
         emergency: false,
         content,
+        origMsg,
         url,
         pool,
       };
@@ -65,9 +66,19 @@ const addToPool = (ticket, pool, timeOutAfter = 5 * 60 * 1000) => {
   }, timeOutAfter);
   ticket.timeOutId = timeOutId;
 };
-export const buildTicket = (pool, { id, content, url }) => {
-  const ticket = ticketFactory(pool, id, content, url);
-  addToPool(ticket, pool);
+export const buildTicket = (pool, options) => {
+  const ticket = ticketFactory(pool, options);
+  const timeout = (() => {
+    switch (pool.name) {
+      case 'IS_REPLAY_POOL':
+        return 60 * 1000;
+      case 'QUEUE_POOL':
+        return 60 * 60 * 1000;
+      default:
+        console.error(`Wrong name provided (${pool.name})`);
+    }
+  })();
+  addToPool(ticket, pool, timeout);
   return ticket;
 };
 const delFromAllPools = id => {
