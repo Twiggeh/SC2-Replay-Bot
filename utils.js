@@ -5,7 +5,6 @@ export const shouldHandleMsg = msg => {
   if (msg.channel.name !== 'replays-1' && msg.channel.name !== 'replays-2') return false;
   return true;
 };
-
 export const POOLS = {};
 
 export const createPool = name => {
@@ -24,7 +23,6 @@ export const createPool = name => {
   Pool.prototype.name = name;
   return result;
 };
-
 export const isPartOfPool = id => {
   for (let poolName in POOLS) {
     const pool = POOLS[poolName];
@@ -32,7 +30,6 @@ export const isPartOfPool = id => {
   }
   return false;
 };
-
 const ticketFactory = (pool, id, content, url) => {
   switch (pool.name) {
     case 'IS_REPLAY_POOL':
@@ -68,9 +65,50 @@ const addToPool = (ticket, pool, timeOutAfter = 5 * 60 * 1000) => {
   }, timeOutAfter);
   ticket.timeOutId = timeOutId;
 };
-
 export const buildTicket = (pool, { id, content, url }) => {
   const ticket = ticketFactory(pool, id, content, url);
   addToPool(ticket, pool);
   return ticket;
 };
+const delFromAllPools = id => {
+  for (let poolName in POOLS) {
+    delete POOLS[poolName][id];
+  }
+};
+export const delAllMsgs = async ({ DMIds, DMChannels }) => {
+  const filterSettled = obj => {
+    if (obj.status === 'fulfilled') return obj.value;
+    console.error(obj.status);
+    console.error(obj.reason);
+  };
+  const fetchedDms = [];
+  if (DMIds) {
+    const dmBuffer = [];
+    DMIds.forEach(id => {
+      const User = new DiscordUser(client, { id });
+      dmBuffer.push(User.createDM());
+    });
+    const result = (await Promise.allSettled(dmBuffer)).map(filterSettled);
+    fetchedDms.push(...result);
+  }
+  if (DMChannels) fetchedDms.push(...DMChannels);
+  const msgBuffer = [];
+  fetchedDms.forEach(dm => msgBuffer.push(dm.messages.fetch()));
+  const fetchedMsgs = (await Promise.allSettled(msgBuffer)).map(filterSettled);
+  const deleteBuffer = [];
+  fetchedMsgs.forEach(msgMap =>
+    Array.from(msgMap).forEach(snowFlakeWithMsg => {
+      const msg = snowFlakeWithMsg[1];
+      const id = snowFlakeWithMsg[0];
+      delFromAllPools(id);
+      msg.author.bot && deleteBuffer.push(msg.delete());
+    })
+  );
+  const deleteResult = await Promise.allSettled(deleteBuffer);
+  console.log(
+    `Deleted ${deleteResult.length} message${deleteResult.length > 1 ? 's' : ''}`
+  );
+};
+
+import { client } from './app.js';
+import { User as DiscordUser } from 'discord.js';

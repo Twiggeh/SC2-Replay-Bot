@@ -1,51 +1,7 @@
-const client = new Discord.Client();
+export const client = new Discord.Client();
 
 const coaches = ['145856913014259712'];
 const IS_REPLAY_POOL = createPool('IS_REPLAY_POOL');
-console.log(IS_REPLAY_POOL);
-console.log(POOLS);
-
-const delFromAllPools = id => {
-  for (let poolName in POOLS) {
-    delete POOLS[poolName][id];
-  }
-};
-
-const delAllMsgs = async ({ DMIds, DMChannels }) => {
-  const filterSettled = obj => {
-    if (obj.status === 'fulfilled') return obj.value;
-    console.error(obj.status);
-    console.error(obj.reason);
-  };
-  const fetchedDms = [];
-  if (DMIds) {
-    const dmBuffer = [];
-    DMIds.forEach(id => {
-      const User = new Discord.User(client, { id });
-      dmBuffer.push(User.createDM());
-    });
-    const result = (await Promise.allSettled(dmBuffer)).map(filterSettled);
-    fetchedDms.push(...result);
-  }
-  if (DMChannels) fetchedDms.push(...DMChannels);
-
-  const msgBuffer = [];
-  fetchedDms.forEach(dm => msgBuffer.push(dm.messages.fetch()));
-  const fetchedMsgs = (await Promise.allSettled(msgBuffer)).map(filterSettled);
-  const deleteBuffer = [];
-  fetchedMsgs.forEach(msgMap =>
-    Array.from(msgMap).forEach(snowFlakeWithMsg => {
-      const msg = snowFlakeWithMsg[1];
-      const id = snowFlakeWithMsg[0];
-      delFromAllPools(id);
-      msg.author.bot && deleteBuffer.push(msg.delete());
-    })
-  );
-  const deleteResult = await Promise.allSettled(deleteBuffer);
-  console.log(
-    `Deleted ${deleteResult.length} message${deleteResult.length > 1 ? 's' : ''}`
-  );
-};
 
 client.on('ready', () => console.log('Bot online'));
 
@@ -99,3 +55,4 @@ import { sleep, shouldHandleMsg, buildTicket, POOLS, createPool } from './utils.
 import { writeFileSync, readFileSync } from 'fs';
 import { confirmIsReplayMsg, isNotSC2Replay } from './messages.js';
 import { isPartOfPool } from './utils.js';
+import { delAllMsgs } from './utils.js';
