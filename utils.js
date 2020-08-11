@@ -50,43 +50,14 @@ const ticketFactory = (pool, { id, content, url, origMsg }) => {
       console.error(new Error(`Wrong type (${pool.name}) provided.`));
   }
 };
-const timeOutHandler = (ticket, system) => {
-  switch (system) {
-    case 'IS_REPLAY_POOL':
-      return;
-    default:
-      console.error(new Error(`Wrong system (${system}) provided.`));
-  }
-};
-const addToPool = (ticket, pool, timeOutAfter = 5 * 60 * 1000) => {
-  ticket.pool = pool;
-  pool[ticket.id] = ticket;
-  const timeOutId = setTimeout(() => {
-    timeOutHandler(ticket, pool.name);
-  }, timeOutAfter);
-  ticket.timeOutId = timeOutId;
-};
-export const buildTicket = (pool, options) => {
-  const ticket = ticketFactory(pool, options);
-  const timeout = (() => {
-    switch (pool.name) {
-      case 'IS_REPLAY_POOL':
-        return 60 * 1000;
-      case 'QUEUE_POOL':
-        return 60 * 60 * 1000;
-      default:
-        console.error(`Wrong name provided (${pool.name})`);
-    }
-  })();
-  addToPool(ticket, pool, timeout);
-  return ticket;
-};
 const delFromAllPools = id => {
   for (let poolName in POOLS) {
     delete POOLS[poolName][id];
   }
 };
 export const delAllMsgs = async ({ DMIds, DMChannels }) => {
+  if (DMIds !== undefined && !Array.isArray(DMIds)) DMIds = [DMIds];
+  if (DMChannels !== undefined && !Array.isArray(DMChannels)) DMChannels = [DMChannels];
   const filterSettled = obj => {
     if (obj.status === 'fulfilled') return obj.value;
     console.error(obj.status);
@@ -121,5 +92,45 @@ export const delAllMsgs = async ({ DMIds, DMChannels }) => {
   );
 };
 
+const timeOutHandler = async (ticket, system) => {
+  ticket.timedOut += 1;
+  switch (system) {
+    case 'IS_REPLAY_POOL': {
+      await ticket.origMsg.author.send(isSC2ReplayReminder);
+      await sleep(10 * 1000);
+      await ticket.origMsg.author.send(isSC2Warning);
+      await sleep(10 * 1000);
+      await delAllMsgs({ DMIds: ticket.origMsg.author.id });
+      return;
+    }
+    default:
+      console.error(new Error(`Wrong system (${system}) provided.`));
+  }
+};
+const addToPool = (ticket, pool, timeOutAfter = 5 * 60 * 1000) => {
+  ticket.pool = pool;
+  pool[ticket.id] = ticket;
+  const timeOutId = setTimeout(() => {
+    timeOutHandler(ticket, pool.name);
+  }, timeOutAfter);
+  ticket.timeOutId = timeOutId;
+};
+export const buildTicket = (pool, options) => {
+  const ticket = ticketFactory(pool, options);
+  const timeout = (() => {
+    switch (pool.name) {
+      case 'IS_REPLAY_POOL':
+        return 60 * 1000;
+      case 'QUEUE_POOL':
+        return 60 * 60 * 1000;
+      default:
+        console.error(`Wrong name provided (${pool.name})`);
+    }
+  })();
+  addToPool(ticket, pool, timeout);
+  return ticket;
+};
+
 import { client } from './app.js';
 import { User as DiscordUser } from 'discord.js';
+import { isSC2ReplayReminder, isSC2Warning } from './messages.js';

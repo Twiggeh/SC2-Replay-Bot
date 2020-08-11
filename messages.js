@@ -34,3 +34,8 @@ export const isSC2ReplayReminder = {
   content:
     "Hey!\n You haven't yet reacted to confirm wether or not your message contained a replay\n and was meant to be looked at by our coaches !",
 };
+
+export const isSC2Warning = {
+  content:
+    'You have still not reacted.\nIt will be assumed that you have not sent a SC2 Replay.',
+};
