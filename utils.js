@@ -5,24 +5,34 @@ export const shouldHandleMsg = msg => {
   if (msg.channel.name !== 'replays-1' && msg.channel.name !== 'replays-2') return false;
   return true;
 };
-export const POOLS = {};
-
-export const createPool = name => {
-  class Pool {
-    add(ticket) {
-      this[ticket.id] = ticket;
-      return this;
+// TODO : Refactor into provider (Pools Provider)
+const POOLS = {};
+const createPool = (name, methods) => {
+  class Pool {}
+  if (methods)
+    for (let method in methods) {
+      Pool.prototype[method] = methods[method];
     }
-    remove(id) {
-      delete this[id];
-      return this;
-    }
-  }
   const result = new Pool();
   POOLS[name] = result;
   Pool.prototype.name = name;
   return result;
 };
+
+const onQueueAdd = () => {
+  // update all coaches
+  // timeout 6h then mark as emergency
+  // when reacted to move into
+};
+
+const addToQUEUE = ticket => {
+  ticket.pool = QUEUE_POOL;
+  QUEUE_POOL[ticket.id] = ticket;
+  onQueueAdd();
+};
+
+export const QUEUE_POOL = createPool('QUEUE_POOL');
+export const IS_REPLAY_POOL = createPool('IS_REPLAY_POOL');
 export const isPartOfPool = id => {
   for (let poolName in POOLS) {
     const pool = POOLS[poolName];
