@@ -140,6 +140,24 @@ export const buildTicket = (pool, options) => {
   addToPool(ticket, pool, timeout);
   return ticket;
 };
+const includesAny = (str, arr) => {
+  if(!Array.isArray(arr)) throw new Error("Arr needs to be an array.")
+  let result = 0;
+  for (let el of arr) {
+    result |= str.includes(el);
+  }
+  return result;
+}
+export const allDataPresent = (msg) => {
+  const result = {
+    playingAs: false,
+    playingAgainst: false,
+    isReplay : false,
+    rank : false,
+  }
+  if(msg.content.includes("[protoss]"))
+  
+}
 
 import { client } from './app.js';
 import { User as DiscordUser } from 'discord.js';
