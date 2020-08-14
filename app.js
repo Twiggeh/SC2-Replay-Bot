@@ -14,10 +14,9 @@ export const client = new Discord.Client();
     // User has reacted
     switch (msgInPool) {
       case 'IS_REPLAY_POOL': {
-        // TODO : Lock the interaction down. Here I don't have to acknowledge that a message might have a history since IS_REPLAY_POOL has immediate consequences to a reaction.
+        // TODO : Lock the interaction down.
         switch (msgReact._emoji.name) {
           case '✅': {
-            // TODO : add coachProvider
             clearTimeout(IS_REPLAY_POOL[msgReact.message.id].timeOutId);
             await IS_REPLAY_POOL[msgReact.message.id].origMsg.delete();
             await msgReact.message.channel.send(isSC2Replay(1));
@@ -63,25 +62,19 @@ export const client = new Discord.Client();
   client.on('message', async msg => {
     if (!shouldHandleMsg(msg)) return;
     await delAllMsgs({ DMIds: coaches });
-    const attachments = Array.from(msg.attachments);
-    for (let i = 0; i < attachments.length; i++) {
-      const msgAttach = attachments[i][1];
-      const url = msgAttach?.url;
-      if (url?.includes?.('SC2Replay') !== true) continue;
-      const content = msg.content;
-      try {
-        const answer = await msg.author.send(confirmIsReplayMsg);
-        buildTicket(IS_REPLAY_POOL, { id: answer.id, content, url, origMsg: msg });
-        await answer.react('✅');
-        await answer.react('🛑');
-      } catch (e) {
-        console.error(new Error(e));
-      }
+    const [hasReplay, url, urlArr] = getMsgAttachments(msg);
+    const { playingAgainst, playingAs, rank, isReplay } = whichDataPresent(msg);
+    if (!hasReplay) return;
+    try {
+      if (!isReplay) await sendConfirmIsReplay();
+      // if (!rank)
+    } catch (e) {
+      console.error(new Error(e));
     }
   });
 })();
 
-// client.login(botKey);
+client.login(botKey);
 
 import { botKey } from './config/keys.js';
 import Discord, { DMChannel } from 'discord.js';
@@ -90,10 +83,13 @@ import {
   shouldHandleMsg,
   buildTicket,
   IS_REPLAY_POOL,
+  getMsgAttachments,
   QUEUE_POOL,
+  isPartOfPool,
+  delAllMsgs,
+  whichDataPresent,
 } from './utils.js';
 import { writeFileSync, readFileSync } from 'fs';
 import { confirmIsReplayMsg, isNotSC2Replay, isSC2Replay } from './messages.js';
-import { isPartOfPool } from './utils.js';
-import { delAllMsgs } from './utils.js';
 import { getCoaches } from './provider/provider.js';
+import { sendConfirmIsReplay } from './utils.js';

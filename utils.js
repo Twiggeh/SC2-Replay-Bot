@@ -1,3 +1,4 @@
+/* eslint-disable indent */
 export const sleep = async time => new Promise(resolve => setTimeout(resolve, time));
 export const shouldHandleMsg = msg => {
   if (msg.author.bot) return false;
@@ -18,19 +19,16 @@ const createPool = (name, methods) => {
   Pool.prototype.name = name;
   return result;
 };
-
 const onQueueAdd = () => {
   // update all coaches
   // timeout 6h then mark as emergency
   // when reacted to move into
 };
-
 const addToQUEUE = ticket => {
   ticket.pool = QUEUE_POOL;
   QUEUE_POOL[ticket.id] = ticket;
   onQueueAdd();
 };
-
 export const QUEUE_POOL = createPool('QUEUE_POOL');
 export const IS_REPLAY_POOL = createPool('IS_REPLAY_POOL');
 export const isPartOfPool = id => {
@@ -101,7 +99,6 @@ export const delAllMsgs = async ({ DMIds, DMChannels }) => {
     `Deleted ${deleteResult.length} message${deleteResult.length > 1 ? 's' : ''}`
   );
 };
-
 const timeOutHandler = async (ticket, system) => {
   ticket.timedOut += 1;
   switch (system) {
@@ -141,24 +138,134 @@ export const buildTicket = (pool, options) => {
   return ticket;
 };
 const includesAny = (str, arr) => {
-  if(!Array.isArray(arr)) throw new Error("Arr needs to be an array.")
   let result = 0;
   for (let el of arr) {
     result |= str.includes(el);
   }
-  return result;
-}
-export const allDataPresent = (msg) => {
-  const result = {
-    playingAs: false,
-    playingAgainst: false,
-    isReplay : false,
-    rank : false,
+  return Boolean(result);
+};
+/**
+ * @returns {{playingAs      : false | "zerg" | "terran" | "protoss",
+              playingAgainst : false | "zerg" | "terran" | "protoss",
+              isReplay       : boolean,
+              rank           : false | "bronze" | "silver" | "gold" | "platinum" | "diamond",
+            }}
+ */
+export const whichDataPresent = msg => {
+  const lowerMsg = msg.content.toLowerCase();
+  return {
+    playingAs: includesAny(lowerMsg, ['[zerg]', '[z]'])
+      ? 'zerg'
+      : includesAny(lowerMsg, ['[protoss]', '[p]', '[toss]'])
+      ? 'protoss'
+      : includesAny(lowerMsg, ['[terran]', '[t]'])
+      ? 'terran'
+      : false,
+    playingAgainst: includesAny(lowerMsg, ['[vszerg]', '[vsz]'])
+      ? 'zerg'
+      : includesAny(lowerMsg, ['[vsprotoss]', '[vsp]', '[vstoss]'])
+      ? 'protoss'
+      : includesAny(lowerMsg, ['[vsterran]', '[vst]'])
+      ? 'terran'
+      : false,
+    isReplay: includesAny(lowerMsg, ['[isreplay]']),
+    rank: includesAny(lowerMsg, ['[bronze]'])
+      ? 'bronze'
+      : includesAny(lowerMsg, ['[silver]'])
+      ? 'silver'
+      : includesAny(lowerMsg, ['[gold]'])
+      ? 'gold'
+      : includesAny(lowerMsg, ['[plat]', '[platinum]'])
+      ? 'platinum'
+      : includesAny(lowerMsg, ['[diamond]', '[dia]'])
+      ? 'diamond'
+      : false,
+  };
+};
+
+/**
+ * @typedef {Boolean} msgHasReplay If the message contains a replay.
+ * @typedef {string} url The Url that contains the replay message.
+ * @typedef {string[]} UrlArray All urls found inside message.
+ * @typedef {MessageAttachment[]} AttachArr All attachments found inside message.
+ * @typedef {[msgHasReplay, UrlArray, AttachArr]} SpecialReturn
+ */
+/** @returns {SpecialReturn} */
+export const getMsgAttachments = msg => {
+  const urlArr = [];
+  const attachMsgArr = [];
+  let url = '';
+  let msgHasReplay = false;
+  for (let msgArr of msg.attachments) {
+    const msgAttach = msgArr[1];
+    urlArr.push(msgAttach.url);
+    if (msgAttach.url.includes('.SC2Replay')) {
+      msgHasReplay = true;
+      url = msgAttach.url;
+    }
+    attachMsgArr.push(msgAttach);
   }
-  if(msg.content.includes("[protoss]"))
-  
-}
+
+  return [msgHasReplay, url, urlArr, attachMsgArr];
+};
+
+export const sendConfirmIsReplay = async (msg, url) => {
+  const answer = await msg.author.send(confirmIsReplayMsg);
+  buildTicket(IS_REPLAY_POOL, {
+    id: answer.id,
+    content: msg.content,
+    url,
+    origMsg: msg,
+  });
+  await answer.react('✅');
+  await answer.react('🛑');
+};
+
+export const sendMissingData = async (msg, playingAgainst, playingAs, rank) => {
+  const reactWithRaces = async answer => {
+    await answer.react('😈');
+    await answer.react('🤠');
+    await answer.react('💠');
+  };
+  const replyOnMissing = {
+    playingAgainst: {
+      reply: 'You have not specified what race you were playing against.\n',
+      action: reactWithRaces,
+    },
+    playingAs: {
+      reply: 'You have not specified what race you were playing as.\n',
+      action: reactWithRaces,
+    },
+    rank: {
+      reply: 'You have not specified what rank you are.\n',
+      action: async answer => {
+        await answer.react('🥉');
+        await answer.react('🥈');
+        await answer.react('🥇');
+        await answer.react('🧱');
+        await answer.react('💎');
+      },
+    },
+  };
+  const buildResponse = () => {
+    let result = '';
+    const actionArr = [];
+    if (!playingAgainst) {
+      result += replyOnMissing.playingAgainst.reply;
+      actionArr.push(replyOnMissing.playingAgainst.action);
+    }
+    if (!playingAs) {
+      result += replyOnMissing.playingAs.reply;
+      actionArr.push(replyOnMissing.playingAs.action);
+    }
+    if (!rank) {
+      result += replyOnMissing.rank.reply;
+      actionArr.push(replyOnMissing.rank.action);
+    }
+    return [result, actionArr];
+  };
+};
 
 import { client } from './app.js';
 import { User as DiscordUser } from 'discord.js';
-import { isSC2ReplayReminder, isSC2Warning } from './messages.js';
+import { isSC2ReplayReminder, isSC2Warning, confirmIsReplayMsg } from './messages.js';
