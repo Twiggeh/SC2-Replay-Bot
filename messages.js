@@ -39,3 +39,12 @@ export const isSC2Warning = {
   content:
     'You have still not reacted.\nIt will be assumed that you have not sent a SC2 Replay.',
 };
+
+export const missingDataError = errorMsg => {
+  const msg = {
+    content: `Your request to be coached will not be processed until you have specified all of the necessary data.
+${errorMsg}You can put those classifiers anywhere in the message.`,
+  };
+  if (msg.length > 2000) console.error(`Will not be able to send message.`);
+  return msg;
+};

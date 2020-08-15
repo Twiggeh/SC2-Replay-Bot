@@ -154,30 +154,30 @@ const includesAny = (str, arr) => {
 export const whichDataPresent = msg => {
   const lowerMsg = msg.content.toLowerCase();
   return {
-    playingAs: includesAny(lowerMsg, ['[zerg]', '[z]'])
+    playingAs: includesAny(lowerMsg, zShortcuts)
       ? 'zerg'
-      : includesAny(lowerMsg, ['[protoss]', '[p]', '[toss]'])
+      : includesAny(lowerMsg, pShortcuts)
       ? 'protoss'
-      : includesAny(lowerMsg, ['[terran]', '[t]'])
+      : includesAny(lowerMsg, tShortcuts)
       ? 'terran'
       : false,
-    playingAgainst: includesAny(lowerMsg, ['[vszerg]', '[vsz]'])
+    playingAgainst: includesAny(lowerMsg, zVsShortcuts)
       ? 'zerg'
-      : includesAny(lowerMsg, ['[vsprotoss]', '[vsp]', '[vstoss]'])
+      : includesAny(lowerMsg, pVsShortcuts)
       ? 'protoss'
-      : includesAny(lowerMsg, ['[vsterran]', '[vst]'])
+      : includesAny(lowerMsg, tVsShortcuts)
       ? 'terran'
       : false,
-    isReplay: includesAny(lowerMsg, ['[isreplay]']),
-    rank: includesAny(lowerMsg, ['[bronze]'])
+    isReplay: includesAny(lowerMsg, isReplayCuts),
+    rank: includesAny(lowerMsg, bRankCuts)
       ? 'bronze'
-      : includesAny(lowerMsg, ['[silver]'])
+      : includesAny(lowerMsg, sRankCuts)
       ? 'silver'
-      : includesAny(lowerMsg, ['[gold]'])
+      : includesAny(lowerMsg, gRankCuts)
       ? 'gold'
-      : includesAny(lowerMsg, ['[plat]', '[platinum]'])
+      : includesAny(lowerMsg, pRankCuts)
       ? 'platinum'
-      : includesAny(lowerMsg, ['[diamond]', '[dia]'])
+      : includesAny(lowerMsg, dRankCuts)
       ? 'diamond'
       : false,
   };
@@ -221,23 +221,49 @@ export const sendConfirmIsReplay = async (msg, url) => {
   await answer.react('🛑');
 };
 
-export const sendMissingData = async (msg, playingAgainst, playingAs, rank) => {
-  const reactWithRaces = async answer => {
-    await answer.react('😈');
-    await answer.react('🤠');
-    await answer.react('💠');
-  };
+export const handleMissingData = async (msg, playingAgainst, playingAs, rank) => {
   const replyOnMissing = {
     playingAgainst: {
-      reply: 'You have not specified what race you were playing against.\n',
-      action: reactWithRaces,
+      reply: `**You have not specified what race you were playing against**
+You can omit this error message by specifying your race with:
+
+\`${zVsShortcuts.join(' or ')}\` to specify that your opponent was a Zerg player.
+\`${tVsShortcuts.join(' or ')}\` to specify that your opponent was a Terran player.
+\`${pVsShortcuts.join(' or ')}\` to specify that your opponent was a Protoss player.
+
+`,
+      action: async answer => {
+        await answer.react('😈');
+        await answer.react('🤠');
+        await answer.react('💠');
+      },
     },
     playingAs: {
-      reply: 'You have not specified what race you were playing as.\n',
-      action: reactWithRaces,
+      reply: `**You have not specified what race you were playing**
+You can omit this error message by specifying your race with:
+
+\`${zShortcuts.join(' or ')}\` to specify that you played as Zerg.
+\`${tShortcuts.join(' or ')}\` to specify that you played as Terran.
+\`${pShortcuts.join(' or ')}\` to specify that you played as Protoss.
+
+`,
+      action: async answer => {
+        await answer.react('🎃');
+        await answer.react('🏀');
+        await answer.react('🥎');
+      },
     },
     rank: {
-      reply: 'You have not specified what rank you are.\n',
+      reply: `**You have not specified what rank you are**
+You can omit this error message by specifying your rank with:
+
+\`${bRankCuts.join(' or ')}\` to specify that your rank is bronze.
+\`${sRankCuts.join(' or ')}\` to specify that your rank is silver.
+\`${gRankCuts.join(' or ')}\` to specify that your rank is gold.
+\`${pRankCuts.join(' or ')}\` to specify that your rank is platinum.
+\`${dRankCuts.join(' or ')}\` to specify that your rank is diamond.
+
+`,
       action: async answer => {
         await answer.react('🥉');
         await answer.react('🥈');
@@ -247,7 +273,7 @@ export const sendMissingData = async (msg, playingAgainst, playingAs, rank) => {
       },
     },
   };
-  const buildResponse = () => {
+  const buildResData = () => {
     let result = '';
     const actionArr = [];
     if (!playingAgainst) {
@@ -264,8 +290,31 @@ export const sendMissingData = async (msg, playingAgainst, playingAs, rank) => {
     }
     return [result, actionArr];
   };
+  const [errStr, actionArr] = buildResData();
+  if (!errStr) return;
+  const answer = await msg.author.send(missingDataError(errStr));
+  actionArr.forEach(async action => void (await action(answer)));
 };
 
 import { client } from './app.js';
 import { User as DiscordUser } from 'discord.js';
-import { isSC2ReplayReminder, isSC2Warning, confirmIsReplayMsg } from './messages.js';
+import {
+  isSC2ReplayReminder,
+  isSC2Warning,
+  confirmIsReplayMsg,
+  missingDataError,
+} from './messages.js';
+import {
+  zShortcuts,
+  pShortcuts,
+  tShortcuts,
+  zVsShortcuts,
+  pVsShortcuts,
+  tVsShortcuts,
+  isReplayCuts,
+  bRankCuts,
+  sRankCuts,
+  gRankCuts,
+  pRankCuts,
+  dRankCuts,
+} from './config/global.js';

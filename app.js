@@ -66,8 +66,10 @@ export const client = new Discord.Client();
     const { playingAgainst, playingAs, rank, isReplay } = whichDataPresent(msg);
     if (!hasReplay) return;
     try {
-      if (!isReplay) await sendConfirmIsReplay();
-      // if (!rank)
+      if (!isReplay) await sendConfirmIsReplay(msg, url);
+      // TODO : Timeouts for missingData
+      // prettier-ignore
+      const todoTimeoutTicket = await handleMissingData(msg, playingAgainst, playingAs, rank);
     } catch (e) {
       console.error(new Error(e));
     }
@@ -93,3 +95,4 @@ import { writeFileSync, readFileSync } from 'fs';
 import { confirmIsReplayMsg, isNotSC2Replay, isSC2Replay } from './messages.js';
 import { getCoaches } from './provider/provider.js';
 import { sendConfirmIsReplay } from './utils.js';
+import { handleMissingData } from './utils.js';
