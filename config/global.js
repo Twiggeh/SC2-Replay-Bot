@@ -6,7 +6,7 @@ export const zVsShortcuts = ['[vszerg]', '[vsz]'];
 export const pVsShortcuts = ['[vsprotoss]', '[vsp]', '[vstoss]'];
 export const tVsShortcuts = ['[vsterran]', '[vst]'];
 
-export const isReplayCuts = ['[isreplay]'];
+export const replayCuts = ['[isreplay]'];
 
 export const bRankCuts = ['[bronze]'];
 export const sRankCuts = ['[silver]'];

@@ -1,13 +1,20 @@
 /* eslint-disable indent */
+/**
+ * @typedef {{[Promise, function, function]}} Lock
+ */
+
 export const sleep = async time => new Promise(resolve => setTimeout(resolve, time));
+
 export const shouldHandleMsg = msg => {
   if (msg.author.bot) return false;
   if (msg.attachments === undefined) return false;
   if (msg.channel.name !== 'replays-1' && msg.channel.name !== 'replays-2') return false;
   return true;
 };
+
 // TODO : Refactor into provider (Pools Provider)
 const POOLS = {};
+
 const createPool = (name, methods) => {
   class Pool {}
   if (methods)
@@ -19,18 +26,11 @@ const createPool = (name, methods) => {
   Pool.prototype.name = name;
   return result;
 };
-const onQueueAdd = () => {
-  // update all coaches
-  // timeout 6h then mark as emergency
-  // when reacted to move into
-};
-const addToQUEUE = ticket => {
-  ticket.pool = QUEUE_POOL;
-  QUEUE_POOL[ticket.id] = ticket;
-  onQueueAdd();
-};
+
 export const QUEUE_POOL = createPool('QUEUE_POOL');
+
 export const IS_REPLAY_POOL = createPool('IS_REPLAY_POOL');
+
 export const isPartOfPool = id => {
   for (let poolName in POOLS) {
     const pool = POOLS[poolName];
@@ -38,8 +38,10 @@ export const isPartOfPool = id => {
   }
   return false;
 };
-const ticketFactory = (pool, { id, content, url, origMsg }) => {
+
+const ticketFactory = (pool, { id, content, url, origMsg, lock, res, rej }) => {
   switch (pool.name) {
+    case 'DATA_VALIDATION':
     case 'IS_REPLAY_POOL':
       return {
         id,
@@ -53,16 +55,24 @@ const ticketFactory = (pool, { id, content, url, origMsg }) => {
         origMsg,
         url,
         pool,
+        lock,
+        res,
+        rej,
       };
     default:
       console.error(new Error(`Wrong type (${pool.name}) provided.`));
   }
 };
+
 const delFromAllPools = id => {
   for (let poolName in POOLS) {
     delete POOLS[poolName][id];
   }
 };
+
+/**
+ * @param {{DmIds: string[] | string, DMChannels: DMChannel[] | DMChannel}} input
+ */
 export const delAllMsgs = async ({ DMIds, DMChannels }) => {
   if (DMIds !== undefined && !Array.isArray(DMIds)) DMIds = [DMIds];
   if (DMChannels !== undefined && !Array.isArray(DMChannels)) DMChannels = [DMChannels];
@@ -99,35 +109,74 @@ export const delAllMsgs = async ({ DMIds, DMChannels }) => {
     `Deleted ${deleteResult.length} message${deleteResult.length > 1 ? 's' : ''}`
   );
 };
+
+// TODO : Need to add interrupt signal into timeoutHandler.
+// TODO : Right now if someone completes the queries the timeout
+// TODO : handler will still send the failure message
 const timeOutHandler = async (ticket, system) => {
+  const interruptRunner = async actions => {
+    for (let action of actions) {
+      if (!ticket.timedOut) return;
+      await action();
+    }
+  };
+
   ticket.timedOut += 1;
   switch (system) {
     case 'IS_REPLAY_POOL': {
-      await ticket.origMsg.author.send(isSC2ReplayReminder);
-      await sleep(10 * 1000);
-      await ticket.origMsg.author.send(isSC2Warning);
-      await sleep(10 * 1000);
-      await delAllMsgs({ DMIds: ticket.origMsg.author.id });
+      await interruptRunner([
+        async () => {
+          await ticket.origMsg.author.send(isSC2ReplayReminder);
+        },
+        async () => {
+          await sleep(10 * 1000);
+        },
+        async () => {
+          await ticket.origMsg.author.send(isSC2Fail);
+        },
+        async () => {
+          await sleep(10 * 1000);
+        },
+        async () => {
+          await delAllMsgs({ DMIds: ticket.origMsg.author.id });
+        },
+      ]);
       return;
     }
+    case 'DATA_VALIDATION':
+      return await interruptRunner([
+        ticket.origMsg.author.send(missingDataReminder),
+        sleep(60 * 1000),
+        ticket.origMsg.author.send(missingDataFail),
+        delAllMsgs({ DMIds: ticket.origMsg.author.id }),
+      ]);
+
     default:
       console.error(new Error(`Wrong system (${system}) provided.`));
   }
 };
+
 const addToPool = (ticket, pool, timeOutAfter = 5 * 60 * 1000) => {
   ticket.pool = pool;
   pool[ticket.id] = ticket;
   const timeOutId = setTimeout(() => {
-    timeOutHandler(ticket, pool.name);
+    try {
+      timeOutHandler(ticket, pool.name);
+    } catch (e) {
+      console.log(e);
+    }
   }, timeOutAfter);
   ticket.timeOutId = timeOutId;
 };
+
 export const buildTicket = (pool, options) => {
   const ticket = ticketFactory(pool, options);
   const timeout = (() => {
     switch (pool.name) {
       case 'IS_REPLAY_POOL':
-        return 60 * 1000;
+        return 1 * 1000;
+      case 'DATA_VALIDATION':
+        return 1 * 60;
       case 'QUEUE_POOL':
         return 60 * 60 * 1000;
       default:
@@ -137,6 +186,7 @@ export const buildTicket = (pool, options) => {
   addToPool(ticket, pool, timeout);
   return ticket;
 };
+
 const includesAny = (str, arr) => {
   let result = 0;
   for (let el of arr) {
@@ -144,6 +194,7 @@ const includesAny = (str, arr) => {
   }
   return Boolean(result);
 };
+
 /**
  * @returns {{playingAs      : false | "zerg" | "terran" | "protoss",
               playingAgainst : false | "zerg" | "terran" | "protoss",
@@ -168,7 +219,7 @@ export const whichDataPresent = msg => {
       : includesAny(lowerMsg, tVsShortcuts)
       ? 'terran'
       : false,
-    isReplay: includesAny(lowerMsg, isReplayCuts),
+    replay: includesAny(lowerMsg, replayCuts),
     rank: includesAny(lowerMsg, bRankCuts)
       ? 'bronze'
       : includesAny(lowerMsg, sRankCuts)
@@ -209,19 +260,53 @@ export const getMsgAttachments = msg => {
   return [msgHasReplay, url, urlArr, attachMsgArr];
 };
 
-export const sendConfirmIsReplay = async (msg, url) => {
+const sendConfirmIsReplay = async msg => {
   const answer = await msg.author.send(confirmIsReplayMsg);
+  await answer.react('✅');
+  await answer.react('🛑');
+  return answer;
+};
+
+/** @returns {Lock} */
+const createLock = () => {
+  const ptr = {};
+  ptr.promise = new Promise((res, rej) => {
+    ptr.resolver = res;
+    ptr.rejecter = rej;
+  });
+  return [ptr.promise, ptr.resolver, ptr.rejecter];
+};
+
+/**
+ *
+ * @param {boolean} isReplay
+ * @param {Discord.Message} msg
+ * @param {string} url
+ * @returns {Lock}
+ */
+export const handleConfIsReplay = async (isReplay, msg, url) => {
+  const lock = createLock();
+  let answer;
+  if (!isReplay) answer = await sendConfirmIsReplay(msg);
   buildTicket(IS_REPLAY_POOL, {
     id: answer.id,
     content: msg.content,
     url,
     origMsg: msg,
+    lock: lock[0],
+    res: lock[1],
+    rej: lock[2],
   });
-  await answer.react('✅');
-  await answer.react('🛑');
+  return lock;
 };
 
-export const handleMissingData = async (msg, playingAgainst, playingAs, rank) => {
+export const handleConfirmation = async msg => {
+  await msg.author.send(isSC2Replay(1));
+  await sleep(10 * 1000);
+  await delAllMsgs({ DMIds: msg.channel.id });
+};
+
+const sendMissingData = async (msg, playingAgainst, playingAs, rank) => {
   const replyOnMissing = {
     playingAgainst: {
       reply: `**You have not specified what race you were playing against**
@@ -294,15 +379,35 @@ You can omit this error message by specifying your rank with:
   if (!errStr) return;
   const answer = await msg.author.send(missingDataError(errStr));
   actionArr.forEach(async action => void (await action(answer)));
+  return answer;
+};
+
+export const handleMissingData = async (msg, playingAgainst, playingAs, rank, url) => {
+  const lock = createLock();
+  const answer = sendMissingData(msg, playingAgainst, playingAs, rank);
+  // TODO : ADD DATA_VALIDATION POOL
+  buildTicket(DATA_VALIDATION, {
+    id: answer.id,
+    content: msg.content,
+    url,
+    origMsg: msg,
+    lock: lock[0],
+    res: lock[1],
+    rej: lock[2],
+  });
+  return lock;
 };
 
 import { client } from './app.js';
-import { User as DiscordUser } from 'discord.js';
+import { User as DiscordUser, DMChannel } from 'discord.js';
 import {
   isSC2ReplayReminder,
-  isSC2Warning,
+  isSC2Fail,
   confirmIsReplayMsg,
   missingDataError,
+  isSC2Replay,
+  missingDataReminder,
+  missingDataFail,
 } from './messages.js';
 import {
   zShortcuts,
@@ -311,7 +416,7 @@ import {
   zVsShortcuts,
   pVsShortcuts,
   tVsShortcuts,
-  isReplayCuts,
+  replayCuts,
   bRankCuts,
   sRankCuts,
   gRankCuts,

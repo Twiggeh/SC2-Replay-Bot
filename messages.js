@@ -35,7 +35,7 @@ export const isSC2ReplayReminder = {
     "Hey!\n You haven't yet reacted to confirm wether or not your message contained a replay\n and was meant to be looked at by our coaches !",
 };
 
-export const isSC2Warning = {
+export const isSC2Fail = {
   content:
     'You have still not reacted.\nIt will be assumed that you have not sent a SC2 Replay.',
 };
@@ -47,4 +47,14 @@ ${errorMsg}You can put those classifiers anywhere in the message.`,
   };
   if (msg.length > 2000) console.error(`Will not be able to send message.`);
   return msg;
+};
+
+export const missingDataReminder = {
+  content:
+    'Hey!\nYou have not placed all reaction necessary!\nYou need to provide all the data for our coaches to take a look at your replay !',
+};
+
+export const missingDataFail = {
+  content:
+    "You have still not reacted.\nIt will be assumed that you don't want to be coached.",
 };

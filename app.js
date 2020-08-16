@@ -1,5 +1,10 @@
 export const client = new Discord.Client();
 
+const clearTTimeout = ticket => {
+  clearTimeout(ticket.timeOutId);
+  ticket.timedOut = 0;
+};
+
 (async () => {
   const allCoachIds = await getCoaches();
   const coaches = ['145856913014259712'];
@@ -14,23 +19,25 @@ export const client = new Discord.Client();
     // User has reacted
     switch (msgInPool) {
       case 'IS_REPLAY_POOL': {
-        // TODO : Lock the interaction down.
+        // TODO : Lock the interaction (reactions) down.
         switch (msgReact._emoji.name) {
           case '✅': {
-            clearTimeout(IS_REPLAY_POOL[msgReact.message.id].timeOutId);
-            await IS_REPLAY_POOL[msgReact.message.id].origMsg.delete();
-            await msgReact.message.channel.send(isSC2Replay(1));
-            console.log(IS_REPLAY_POOL[msgReact.message.id]);
-            await sleep(10 * 1000);
-            await delAllMsgs({ DMChannels: msgReact.message.channel });
+            const ticket = IS_REPLAY_POOL[msgReact.message.id];
+            clearTTimeout(ticket);
+            await ticket.origMsg.delete();
             // push to QUEUE
+            ticket.res();
+            delete IS_REPLAY_POOL[msgReact.message.id];
             return;
           }
           case '🛑': {
-            clearTimeout(IS_REPLAY_POOL[msgReact.message.id].timeOutId);
+            const ticket = IS_REPLAY_POOL[msgReact.message.id];
+            clearTTimeout(ticket);
+            ticket.rej({ type: 'unimportant', msg: 'Was not a replay.' });
             await msgReact.message.channel.send(isNotSC2Replay);
             await sleep(10 * 1000);
             await delAllMsgs({ DMChannels: msgReact.message.channel });
+            delete IS_REPLAY_POOL[msgReact.message.id];
             return;
           }
           default:
@@ -63,13 +70,15 @@ export const client = new Discord.Client();
     if (!shouldHandleMsg(msg)) return;
     await delAllMsgs({ DMIds: coaches });
     const [hasReplay, url, urlArr] = getMsgAttachments(msg);
-    const { playingAgainst, playingAs, rank, isReplay } = whichDataPresent(msg);
+    const { playingAgainst, playingAs, rank, replay } = whichDataPresent(msg);
     if (!hasReplay) return;
     try {
-      if (!isReplay) await sendConfirmIsReplay(msg, url);
-      // TODO : Timeouts for missingData
+      const [replayL] = await handleConfIsReplay(replay, msg, url);
+      await replayL;
       // prettier-ignore
-      const todoTimeoutTicket = await handleMissingData(msg, playingAgainst, playingAs, rank);
+      const [misDataL] = await handleMissingData(msg, playingAgainst, playingAs, rank, url);
+      await misDataL;
+      await handleConfirmation();
     } catch (e) {
       console.error(new Error(e));
     }
@@ -79,7 +88,7 @@ export const client = new Discord.Client();
 client.login(botKey);
 
 import { botKey } from './config/keys.js';
-import Discord, { DMChannel } from 'discord.js';
+import Discord from 'discord.js';
 import {
   sleep,
   shouldHandleMsg,
@@ -94,5 +103,4 @@ import {
 import { writeFileSync, readFileSync } from 'fs';
 import { confirmIsReplayMsg, isNotSC2Replay, isSC2Replay } from './messages.js';
 import { getCoaches } from './provider/provider.js';
-import { sendConfirmIsReplay } from './utils.js';
-import { handleMissingData } from './utils.js';
+import { handleMissingData, handleConfIsReplay, handleConfirmation } from './utils.js';
