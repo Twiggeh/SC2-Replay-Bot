@@ -33,7 +33,7 @@ const clearTTimeout = ticket => {
           case '🛑': {
             const ticket = IS_REPLAY_POOL[msgReact.message.id];
             clearTTimeout(ticket);
-            ticket.rej({ type: 'unimportant', msg: 'Was not a replay.' });
+            ticket.rej('Was not a replay.');
             await msgReact.message.channel.send(isNotSC2Replay);
             await sleep(10 * 1000);
             await delAllMsgs({ DMChannels: msgReact.message.channel });
