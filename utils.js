@@ -51,6 +51,7 @@ const ticketFactory = (pool, { id, content, url, origMsg, lock, res, rej }) => {
         timedOut: 0,
         timeOutId: undefined,
         emergency: false,
+        lockedEmojiInteractionGroups: [],
         content,
         origMsg,
         url,
@@ -110,9 +111,6 @@ export const delAllMsgs = async ({ DMIds, DMChannels }) => {
   );
 };
 
-// TODO : Need to add interrupt signal into timeoutHandler.
-// TODO : Right now if someone completes the queries the timeout
-// TODO : handler will still send the failure message
 const timeOutHandler = async (ticket, system) => {
   const interruptRunner = async actions => {
     for (let action of actions) {
@@ -309,9 +307,9 @@ You can omit this error message by specifying your race with:
 
 `,
       action: async answer => {
-        await answer.react('😈');
-        await answer.react('🤠');
-        await answer.react('💠');
+        await answer.react(raceEmojies.vsTerran.id);
+        await answer.react(raceEmojies.vsZerg.id);
+        await answer.react(raceEmojies.vsProtoss.id);
       },
     },
     playingAs: {
@@ -388,6 +386,93 @@ export const handleMissingData = async (msg, playingAgainst, playingAs, rank, ur
     rej: lock[2],
   });
   return lock;
+};
+
+const deepSetObj = (obj, propPath, value) => {
+  if (typeof propPath === 'string') propPath = propPath.split('.');
+  const curProperty = propPath.shift();
+  if (propPath.length > 0) {
+    if (obj[curProperty] === undefined) obj[curProperty] = {};
+    return deepSetObj(obj[curProperty], propPath, value);
+  }
+  obj[curProperty] = value;
+};
+
+const emojiInteractions = {};
+
+export const registerEmojiInteraction = (pool, ...args) => {
+  for (let i = 0; i < args.length; i += 2) {
+    deepSetObj(emojiInteractions, [pool.name, args[0]], args[1]);
+  }
+};
+
+// TODO : Refactor register EmojiInteraction to init
+registerEmojiInteraction(IS_REPLAY_POOL, 'binaryAction', ['✅', '🛑']);
+registerEmojiInteraction(DATA_VALIDATION_POOL, [
+  'race',
+  [raceEmojies.terran.id, raceEmojies.zerg.id, raceEmojies.protoss.id],
+  'rank',
+  [
+    rankEmojies.bronze.id,
+    rankEmojies.silver.id,
+    rankEmojies.gold.id,
+    rankEmojies.platinum.id,
+    rankEmojies.diamond.id,
+  ],
+  'vsrace',
+  [raceEmojies.vsTerran.id, raceEmojies.vsZerg.id, raceEmojies.vsProtoss.id],
+]);
+
+const getActualGroup = (emoji, pool) => {
+  const groups = emojiInteractions[pool.name];
+  let actualGroup = false;
+  for (let group in groups) {
+    if (groups[groups].includes(emoji)) {
+      actualGroup = group;
+      break;
+    }
+  }
+  return actualGroup;
+};
+
+export const lockEmojiInter = (emoji, pool, msg) => {
+  const actualGroup = getActualGroup(emoji, pool);
+  lockEmojiInterWGroup(actualGroup, msg);
+};
+
+export const lockEmojiInterWGroup = (group, msg) => {
+  const groupIndex = msg.lockedEmojiInteractionGroups.indexOf(group);
+  if (groupIndex !== -1) return console.error(`Group (${group}) already locked down.`);
+  msg.lockedEmojiInteractionGroups.push(group);
+};
+
+export const freeEmojiInter = (emoji, pool, msg) => {
+  const actualGroup = getActualGroup(emoji, pool);
+  freeEmojiInterWGroup(actualGroup, msg);
+};
+
+export const freeEmojiInterWGroup = (group, msg) => {
+  const groupIndex = msg.lockedEmojiInteractionGroups.indexOf(group);
+  if (groupIndex === -1) return console.error(`Group (${group}) is already unlocked.`);
+  msg.lockedEmojiInteractionGroups.splice(groupIndex, 1);
+};
+
+export const isLocked = (emoji, pool, msg) => {
+  const actualGroup = getActualGroup(emoji, pool);
+  return isLockedwGroup(emoji, pool, msg, actualGroup);
+};
+
+export const isLockedwGroup = (emoji, pool, msg, group) => {
+  const ticket = pool[msg.id];
+  if (ticket === undefined || !group) {
+    console.error(
+      `Did not find ticket (${ticket}) or group (${group}) with emoji (${emoji})`
+    );
+    return true;
+  }
+  const index = ticket.lockedEmojiInteractionGroups.indexOf(group);
+  if (index === -1) return false;
+  return true;
 };
 
 import { client } from './app.js';

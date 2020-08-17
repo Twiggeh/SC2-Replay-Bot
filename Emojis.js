@@ -42,4 +42,16 @@ export const raceEmojies = {
     id: '548900632107548682',
     url: 'https://cdn.discordapp.com/emojis/548900632107548682.png?v=1',
   },
+  vsTerran: {
+    id: '😈',
+    url: 'https://cdn.discordapp.com/emojis/548901541562548238.png?v=1',
+  },
+  vsZerg: {
+    id: '🤠',
+    url: 'https://cdn.discordapp.com/emojis/548900104141275138.png?v=1',
+  },
+  vsProtoss: {
+    id: '💠',
+    url: 'https://cdn.discordapp.com/emojis/548900632107548682.png?v=1',
+  },
 };
