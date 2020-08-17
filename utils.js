@@ -27,9 +27,9 @@ const createPool = (name, methods) => {
   return result;
 };
 
-export const QUEUE_POOL = createPool('QUEUE_POOL');
-
 export const IS_REPLAY_POOL = createPool('IS_REPLAY_POOL');
+export const DATA_VALIDATION_POOL = createPool('DATA_VALIDATION_POOL');
+export const QUEUE_POOL = createPool('QUEUE_POOL');
 
 export const isPartOfPool = id => {
   for (let poolName in POOLS) {
@@ -41,7 +41,7 @@ export const isPartOfPool = id => {
 
 const ticketFactory = (pool, { id, content, url, origMsg, lock, res, rej }) => {
   switch (pool.name) {
-    case 'DATA_VALIDATION':
+    case 'DATA_VALIDATION_POOL':
     case 'IS_REPLAY_POOL':
       return {
         id,
@@ -125,30 +125,21 @@ const timeOutHandler = async (ticket, system) => {
   switch (system) {
     case 'IS_REPLAY_POOL': {
       await interruptRunner([
-        async () => {
-          await ticket.origMsg.author.send(isSC2ReplayReminder);
-        },
-        async () => {
-          await sleep(10 * 1000);
-        },
-        async () => {
-          await ticket.origMsg.author.send(isSC2Fail);
-        },
-        async () => {
-          await sleep(10 * 1000);
-        },
-        async () => {
-          await delAllMsgs({ DMIds: ticket.origMsg.author.id });
-        },
+        () => ticket.origMsg.author.send(isSC2ReplayReminder),
+        () => sleep(10 * 1000),
+        () => ticket.origMsg.author.send(isSC2Fail),
+        () => sleep(10 * 1000),
+        () => delAllMsgs({ DMIds: ticket.origMsg.author.id }),
       ]);
       return;
     }
-    case 'DATA_VALIDATION':
+    case 'DATA_VALIDATION_POOL':
       return await interruptRunner([
-        ticket.origMsg.author.send(missingDataReminder),
-        sleep(60 * 1000),
-        ticket.origMsg.author.send(missingDataFail),
-        delAllMsgs({ DMIds: ticket.origMsg.author.id }),
+        () => ticket.origMsg.author.send(missingDataReminder),
+        () => sleep(60 * 1000),
+        () => ticket.origMsg.author.send(missingDataFail),
+        () => sleep(10 * 1000),
+        () => delAllMsgs({ DMIds: ticket.origMsg.author.id }),
       ]);
 
     default:
@@ -174,9 +165,9 @@ export const buildTicket = (pool, options) => {
   const timeout = (() => {
     switch (pool.name) {
       case 'IS_REPLAY_POOL':
-        return 1 * 1000;
-      case 'DATA_VALIDATION':
-        return 1 * 60;
+        return 10 * 1000;
+      case 'DATA_VALIDATION_POOL':
+        return 40 * 60;
       case 'QUEUE_POOL':
         return 60 * 60 * 1000;
       default:
@@ -333,9 +324,9 @@ You can omit this error message by specifying your race with:
 
 `,
       action: async answer => {
-        await answer.react('🎃');
-        await answer.react('🏀');
-        await answer.react('🥎');
+        await answer.react(raceEmojies.terran.id);
+        await answer.react(raceEmojies.zerg.id);
+        await answer.react(raceEmojies.protoss.id);
       },
     },
     rank: {
@@ -350,11 +341,11 @@ You can omit this error message by specifying your rank with:
 
 `,
       action: async answer => {
-        await answer.react('🥉');
-        await answer.react('🥈');
-        await answer.react('🥇');
-        await answer.react('🧱');
-        await answer.react('💎');
+        await answer.react(rankEmojies.bronze.id);
+        await answer.react(rankEmojies.silver.id);
+        await answer.react(rankEmojies.gold.id);
+        await answer.react(rankEmojies.platinum.id);
+        await answer.react(rankEmojies.diamond.id);
       },
     },
   };
@@ -378,15 +369,16 @@ You can omit this error message by specifying your rank with:
   const [errStr, actionArr] = buildResData();
   if (!errStr) return;
   const answer = await msg.author.send(missingDataError(errStr));
-  actionArr.forEach(async action => void (await action(answer)));
+  for (let action of actionArr) {
+    await action(answer);
+  }
   return answer;
 };
 
 export const handleMissingData = async (msg, playingAgainst, playingAs, rank, url) => {
   const lock = createLock();
-  const answer = sendMissingData(msg, playingAgainst, playingAs, rank);
-  // TODO : ADD DATA_VALIDATION POOL
-  buildTicket(DATA_VALIDATION, {
+  const answer = await sendMissingData(msg, playingAgainst, playingAs, rank);
+  buildTicket(DATA_VALIDATION_POOL, {
     id: answer.id,
     content: msg.content,
     url,
@@ -423,3 +415,4 @@ import {
   pRankCuts,
   dRankCuts,
 } from './config/global.js';
+import { raceEmojies, rankEmojies } from './Emojis.js';
