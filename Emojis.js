@@ -1,4 +1,4 @@
-export const rankEmojies = {
+export const rankEmojis = {
   bronze: {
     id: '581965728484425764',
     url: 'https://cdn.discordapp.com/emojis/581965728484425764.png?v=1',
@@ -29,7 +29,7 @@ export const rankEmojies = {
   },
 };
 
-export const raceEmojies = {
+export const raceEmojis = {
   terran: {
     id: '548901541562548238',
     url: 'https://cdn.discordapp.com/emojis/548901541562548238.png?v=1',
@@ -54,4 +54,9 @@ export const raceEmojies = {
     id: '💠',
     url: 'https://cdn.discordapp.com/emojis/548900632107548682.png?v=1',
   },
+};
+
+export const allEmojis = {
+  ...raceEmojis,
+  ...rankEmojis,
 };
