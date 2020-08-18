@@ -39,9 +39,32 @@ export const isPartOfPool = id => {
   return false;
 };
 
-const ticketFactory = (pool, { id, content, url, origMsg, lock, res, rej }) => {
+const ticketFactory = (
+  pool,
+  { id, content, url, origMsg, lock, res, rej, race, vsRace, rank }
+) => {
   switch (pool.name) {
     case 'DATA_VALIDATION_POOL':
+      return {
+        id,
+        hasBeenReactedTo: false,
+        reactionHistory: [],
+        activatedAt: Date.now(),
+        timedOut: 0,
+        timeOutId: undefined,
+        emergency: false,
+        lockedEmojiInteractionGroups: [],
+        race,
+        vsRace,
+        rank,
+        content,
+        origMsg,
+        url,
+        pool,
+        lock,
+        res,
+        rej,
+      };
     case 'IS_REPLAY_POOL':
       return {
         id,
@@ -126,19 +149,23 @@ const timeOutHandler = async (ticket, system) => {
         () => ticket.origMsg.author.send(isSC2ReplayReminder),
         () => sleep(10 * 1000),
         () => ticket.origMsg.author.send(isSC2Fail),
-        () => sleep(10 * 1000),
-        () => delAllMsgs({ DMIds: ticket.origMsg.author.id }),
       ]);
+      ticket.rej("User didn't confirm if msg was a replay - timed out.");
+      await sleep(10 * 1000);
+      await delAllMsgs({ DMIds: ticket.origMsg.author.id });
       return;
     }
-    case 'DATA_VALIDATION_POOL':
-      return await interruptRunner([
+    case 'DATA_VALIDATION_POOL': {
+      await interruptRunner([
         () => ticket.origMsg.author.send(missingDataReminder),
         () => sleep(60 * 1000),
         () => ticket.origMsg.author.send(missingDataFail),
-        () => sleep(10 * 1000),
-        () => delAllMsgs({ DMIds: ticket.origMsg.author.id }),
       ]);
+      ticket.rej("User didn't validate all necessary data - timed out.");
+      await sleep(10 * 1000);
+      await delAllMsgs({ DMIds: ticket.origMsg.author.id });
+      return;
+    }
 
     default:
       console.error(new Error(`Wrong system (${system}) provided.`));
@@ -307,9 +334,9 @@ You can omit this error message by specifying your race with:
 
 `,
       action: async answer => {
-        await answer.react(raceEmojies.vsTerran.id);
-        await answer.react(raceEmojies.vsZerg.id);
-        await answer.react(raceEmojies.vsProtoss.id);
+        await answer.react(raceEmojis.vsTerran.id);
+        await answer.react(raceEmojis.vsZerg.id);
+        await answer.react(raceEmojis.vsProtoss.id);
       },
     },
     playingAs: {
@@ -322,9 +349,9 @@ You can omit this error message by specifying your race with:
 
 `,
       action: async answer => {
-        await answer.react(raceEmojies.terran.id);
-        await answer.react(raceEmojies.zerg.id);
-        await answer.react(raceEmojies.protoss.id);
+        await answer.react(raceEmojis.terran.id);
+        await answer.react(raceEmojis.zerg.id);
+        await answer.react(raceEmojis.protoss.id);
       },
     },
     rank: {
@@ -339,11 +366,11 @@ You can omit this error message by specifying your rank with:
 
 `,
       action: async answer => {
-        await answer.react(rankEmojies.bronze.id);
-        await answer.react(rankEmojies.silver.id);
-        await answer.react(rankEmojies.gold.id);
-        await answer.react(rankEmojies.platinum.id);
-        await answer.react(rankEmojies.diamond.id);
+        await answer.react(rankEmojis.bronze.id);
+        await answer.react(rankEmojis.silver.id);
+        await answer.react(rankEmojis.gold.id);
+        await answer.react(rankEmojis.platinum.id);
+        await answer.react(rankEmojis.diamond.id);
       },
     },
   };
@@ -381,6 +408,9 @@ export const handleMissingData = async (msg, playingAgainst, playingAs, rank, ur
     content: msg.content,
     url,
     origMsg: msg,
+    rank,
+    race: playingAs,
+    vsRace: playingAgainst,
     lock: lock[0],
     res: lock[1],
     rej: lock[2],
@@ -400,30 +430,47 @@ const deepSetObj = (obj, propPath, value) => {
 
 const emojiInteractions = {};
 
-export const registerEmojiInteraction = (pool, ...args) => {
-  for (let i = 0; i < args.length; i += 2) {
-    deepSetObj(emojiInteractions, [pool.name, args[0]], args[1]);
-  }
+/**
+ * @typedef EmojiGroupContent
+ * @type {Object}
+ * @prop {string[]} emojis All emojis belonging to the group
+ * @prop {function} onAdd Runs when the group is unlocked
+ *                        (no other emoji in the group is active),
+ *                        and the user reacts with an emoji from this group.
+ * @prop {function} onDel Runs when the user removes a reaction belonging to this group.
+ */
+/**
+ * @param {object} pool INSTANCE OF POOL
+ * @param {Object.<string, EmojiGroupContent>} groups
+ */
+export const registerEmojiInteraction = (pool, groups) => {
+  // TODO : finish `registerEmojiInteraction` function.
+  // TODO : add onAdd and onDel handlers to EmojiGroups
 };
 
 // TODO : Refactor register EmojiInteraction to init
-registerEmojiInteraction(IS_REPLAY_POOL, 'binaryAction', ['✅', '🛑']);
-registerEmojiInteraction(DATA_VALIDATION_POOL, [
-  'race',
-  [raceEmojies.terran.id, raceEmojies.zerg.id, raceEmojies.protoss.id],
-  'rank',
-  [
-    rankEmojies.bronze.id,
-    rankEmojies.silver.id,
-    rankEmojies.gold.id,
-    rankEmojies.platinum.id,
-    rankEmojies.diamond.id,
-  ],
-  'vsrace',
-  [raceEmojies.vsTerran.id, raceEmojies.vsZerg.id, raceEmojies.vsProtoss.id],
-]);
+registerEmojiInteraction(IS_REPLAY_POOL, { binaryAction: { emojis: ['✅', '🛑'] } });
+registerEmojiInteraction(DATA_VALIDATION_POOL, {
+  race: {
+    emojis: [raceEmojis.terran.id, raceEmojis.zerg.id, raceEmojis.protoss.id],
+    onAdd: () => {},
+    onDel: () => {},
+  },
+  rank: {
+    emojis: [
+      rankEmojis.bronze.id,
+      rankEmojis.silver.id,
+      rankEmojis.gold.id,
+      rankEmojis.platinum.id,
+      rankEmojis.diamond.id,
+    ],
+  },
+  vsrace: {
+    emojis: [raceEmojis.vsTerran.id, raceEmojis.vsZerg.id, raceEmojis.vsProtoss.id],
+  },
+});
 
-const getActualGroup = (emoji, pool) => {
+export const getActualGroup = (emoji, pool) => {
   const groups = emojiInteractions[pool.name];
   let actualGroup = false;
   for (let group in groups) {
@@ -435,26 +482,26 @@ const getActualGroup = (emoji, pool) => {
   return actualGroup;
 };
 
-export const lockEmojiInter = (emoji, pool, msg) => {
+export const lockEmojiInter = (emoji, pool, ticket) => {
   const actualGroup = getActualGroup(emoji, pool);
-  lockEmojiInterWGroup(actualGroup, msg);
+  lockEmojiInterWGroup(actualGroup, ticket);
 };
 
-export const lockEmojiInterWGroup = (group, msg) => {
-  const groupIndex = msg.lockedEmojiInteractionGroups.indexOf(group);
+export const lockEmojiInterWGroup = (group, ticket) => {
+  const groupIndex = ticket.lockedEmojiInteractionGroups.indexOf(group);
   if (groupIndex !== -1) return console.error(`Group (${group}) already locked down.`);
-  msg.lockedEmojiInteractionGroups.push(group);
+  ticket.lockedEmojiInteractionGroups.push(group);
 };
 
-export const freeEmojiInter = (emoji, pool, msg) => {
+export const freeEmojiInter = (emoji, pool, ticket) => {
   const actualGroup = getActualGroup(emoji, pool);
-  freeEmojiInterWGroup(actualGroup, msg);
+  freeEmojiInterWGroup(actualGroup, ticket);
 };
 
-export const freeEmojiInterWGroup = (group, msg) => {
-  const groupIndex = msg.lockedEmojiInteractionGroups.indexOf(group);
+export const freeEmojiInterWGroup = (group, ticket) => {
+  const groupIndex = ticket.lockedEmojiInteractionGroups.indexOf(group);
   if (groupIndex === -1) return console.error(`Group (${group}) is already unlocked.`);
-  msg.lockedEmojiInteractionGroups.splice(groupIndex, 1);
+  ticket.lockedEmojiInteractionGroups.splice(groupIndex, 1);
 };
 
 export const isLocked = (emoji, pool, msg) => {
@@ -500,4 +547,4 @@ import {
   pRankCuts,
   dRankCuts,
 } from './config/global.js';
-import { raceEmojies, rankEmojies } from './Emojis.js';
+import { raceEmojis, rankEmojis } from './Emojis.js';
