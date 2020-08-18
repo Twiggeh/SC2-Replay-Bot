@@ -12,20 +12,27 @@ const clearTTimeout = ticket => {
   client.on('ready', () => console.log('Bot online'));
 
   client.on('messageReactionAdd', async (msgReact, user) => {
+    if (user.bot) return;
     const badEmoji = () =>
       console.log('User tried to provide wrong emote : ' + msgReact._emoji.name);
-    if (user.bot) return;
     const msgInPool = isPartOfPool(msgReact.message.id);
-    // User has reacted
+    if (!msgInPool)
+      return console.error('User reacted on a message that is not in the message Pool');
     switch (msgInPool) {
       case 'IS_REPLAY_POOL': {
         // TODO : Lock the interaction (reactions) down.
+        const locked = isLockedwGroup(
+          msgReact._emoji.name,
+          IS_REPLAY_POOL,
+          msgReact.message,
+          'binaryAction'
+        );
+        if (locked) return;
         switch (msgReact._emoji.name) {
           case '✅': {
             const ticket = IS_REPLAY_POOL[msgReact.message.id];
             clearTTimeout(ticket);
             await ticket.origMsg.delete();
-            // push to QUEUE
             ticket.res();
             delete IS_REPLAY_POOL[msgReact.message.id];
             return;
@@ -43,6 +50,28 @@ const clearTTimeout = ticket => {
           default:
             return badEmoji();
         }
+      }
+      case 'DATA_VALIDATION_POOL': {
+        let isCorrectEmoji = 1;
+        for (let emoji of allEmojies) {
+          isCorrectEmoji |= emoji.id === msgReact._emoji.name;
+          isCorrectEmoji |= emoji.id === msgReact._emoji.id;
+        }
+        if (!isCorrectEmoji) return badEmoji();
+
+        const locked = isLocked(
+          msgReact._emoji.name,
+          DATA_VALIDATION_POOL,
+          msgReact.message
+        );
+        if (locked) return;
+
+        const group = getActualGroup(msgReact._emoji.name, DATA_VALIDATION_POOL);
+        lockEmojiInterWGroup(group, DATA_VALIDATION_POOL[msgReact.message.id]);
+        // TODO : add the functionality to extend timeouts to handleTimeout
+        // TODO : add onAdd and onDel handlers to EmojiGroups
+
+        return;
       }
       case 'QUEUE_POOL': {
         const ticketHasPlayerWaiting = () => true;
@@ -63,6 +92,28 @@ const clearTTimeout = ticket => {
       }
       default:
         return console.log(`POOL ${msgInPool} not implemented`);
+    }
+  });
+
+  client.on('messageReactionRemove', async (msgReact, user) => {
+    const msgInPool = isPartOfPool(msgReact.message.id);
+    if (!msgInPool)
+      return console.error(
+        'User removed a reaction on a message that is not in the message Pool'
+      );
+    switch (msgInPool) {
+      case 'DATA_VALIDATION_POOL': {
+        freeEmojiInter(
+          msgReact._emoji.name,
+          DATA_VALIDATION_POOL,
+          DATA_VALIDATION_POOL[msgReact.message.id]
+        );
+        return;
+      }
+      default:
+        return console.log(
+          `POOL ${msgInPool} not implemented, or it doesn't have a undo capability.`
+        );
     }
   });
 
@@ -103,4 +154,17 @@ import {
 import { writeFileSync, readFileSync } from 'fs';
 import { confirmIsReplayMsg, isNotSC2Replay, isSC2Replay } from './messages.js';
 import { getCoaches } from './provider/provider.js';
-import { handleMissingData, handleConfIsReplay, handleConfirmation } from './utils.js';
+import {
+  handleMissingData,
+  handleConfIsReplay,
+  handleConfirmation,
+  freeEmojiInter,
+  isLockedwGroup,
+  DATA_VALIDATION_POOL,
+  isLocked,
+  lockEmojiInter,
+} from './utils.js';
+
+import { raceEmojies, rankEmojies, allEmojies } from './Emojis.js';
+import { getActualGroup } from './utils.js';
+import { lockEmojiInterWGroup } from './utils.js';
