@@ -42,6 +42,9 @@ export const raceEmojis = {
     id: '548900632107548682',
     url: 'https://cdn.discordapp.com/emojis/548900632107548682.png?v=1',
   },
+};
+
+export const vsRaceEmojis = {
   vsTerran: {
     id: '😈',
     url: 'https://cdn.discordapp.com/emojis/548901541562548238.png?v=1',
@@ -59,4 +62,5 @@ export const raceEmojis = {
 export const allEmojis = {
   ...raceEmojis,
   ...rankEmojis,
+  ...vsRaceEmojis,
 };

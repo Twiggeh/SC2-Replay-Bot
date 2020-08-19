@@ -58,3 +58,10 @@ export const missingDataFail = {
   content:
     "You have still not reacted.\nIt will be assumed that you don't want to be coached.",
 };
+
+export const reactedTooFast = {
+  content: `Please refrain from reacting to the message while it is still being populated with reactions :D
+
+  **Your coach request has been terminated.**
+Please restart the process, and if possible, include all of the data tags that are required!`,
+};

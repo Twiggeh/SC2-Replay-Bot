@@ -16,8 +16,10 @@ const clearTTimeout = ticket => {
     const badEmoji = () =>
       console.log('User tried to provide wrong emote : ' + msgReact._emoji.name);
     const msgInPool = isPartOfPool(msgReact.message.id);
-    if (!msgInPool)
+    if (!msgInPool) {
+      handleUserReactedTooFast(msgReact.message, user);
       return console.error('User reacted on a message that is not in the message Pool');
+    }
     switch (msgInPool) {
       case 'IS_REPLAY_POOL': {
         // TODO : Lock the interaction (reactions) down.
@@ -52,24 +54,29 @@ const clearTTimeout = ticket => {
         }
       }
       case 'DATA_VALIDATION_POOL': {
-        let isCorrectEmoji = 1;
-        for (let emoji of allEmojies) {
+        let isCorrectEmoji = 0;
+        for (let key in allEmojis) {
+          const emoji = allEmojis[key];
           isCorrectEmoji |= emoji.id === msgReact._emoji.name;
           isCorrectEmoji |= emoji.id === msgReact._emoji.id;
         }
         if (!isCorrectEmoji) return badEmoji();
 
         const locked = isLocked(
-          msgReact._emoji.name,
+          msgReact._emoji.id,
           DATA_VALIDATION_POOL,
           msgReact.message
         );
         if (locked) return;
 
         const group = getActualGroup(msgReact._emoji.name, DATA_VALIDATION_POOL);
-        lockEmojiInterWGroup(group, DATA_VALIDATION_POOL[msgReact.message.id]);
+        lockEmojiInterWGroup(
+          group,
+          DATA_VALIDATION_POOL[msgReact.message.id],
+          msgReact._emoji.name
+        );
+
         // TODO : add the functionality to extend timeouts to handleTimeout
-        // TODO : add onAdd and onDel handlers to EmojiGroups
 
         return;
       }
@@ -97,10 +104,12 @@ const clearTTimeout = ticket => {
 
   client.on('messageReactionRemove', async (msgReact, user) => {
     const msgInPool = isPartOfPool(msgReact.message.id);
-    if (!msgInPool)
+    if (!msgInPool) {
+      handleUserReactedTooFast(user);
       return console.error(
         'User removed a reaction on a message that is not in the message Pool'
       );
+    }
     switch (msgInPool) {
       case 'DATA_VALIDATION_POOL': {
         freeEmojiInter(
@@ -123,13 +132,20 @@ const clearTTimeout = ticket => {
     const [hasReplay, url, urlArr] = getMsgAttachments(msg);
     const { playingAgainst, playingAs, rank, replay } = whichDataPresent(msg);
     if (!hasReplay) return;
+    const dataFlow = dataFlowFactory(msg.id);
     try {
-      const [replayL] = await handleConfIsReplay(replay, msg, url);
-      await replayL;
-      // prettier-ignore
-      const [misDataL] = await handleMissingData(msg, playingAgainst, playingAs, rank, url);
-      await misDataL;
-      await handleConfirmation();
+      interruptRunner(dataFlow.aborted, [
+        async () => {
+          const [replayL] = await handleConfIsReplay(replay, msg, url);
+          await replayL;
+        },
+        async () => {
+          // prettier-ignore
+          const [misDataL] = await handleMissingData(msg, playingAgainst, playingAs, rank, url);
+          await misDataL;
+        },
+        () => handleConfirmation(),
+      ]);
     } catch (e) {
       console.error(new Error(e));
     }
@@ -162,9 +178,10 @@ import {
   isLockedwGroup,
   DATA_VALIDATION_POOL,
   isLocked,
-  lockEmojiInter,
+  lockEmojiInterWGroup,
+  getActualGroup,
+  dataFlowFactory,
+  handleUserReactedTooFast,
+  interruptRunner,
 } from './utils.js';
-
-import { raceEmojies, rankEmojies, allEmojies } from './Emojis.js';
-import { getActualGroup } from './utils.js';
-import { lockEmojiInterWGroup } from './utils.js';
+import { allEmojis } from './Emojis.js';

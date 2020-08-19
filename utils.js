@@ -134,33 +134,36 @@ export const delAllMsgs = async ({ DMIds, DMChannels }) => {
   );
 };
 
-const timeOutHandler = async (ticket, system) => {
-  const interruptRunner = async actions => {
-    for (let action of actions) {
-      if (!ticket.timedOut) return;
-      await action();
-    }
-  };
+export const interruptRunner = async (abortedPtr, actions) => {
+  for (let action of actions) {
+    if (abortedPtr) return true;
+    await action();
+  }
+  return false;
+};
 
+const timeOutHandler = async (ticket, system) => {
   ticket.timedOut += 1;
   switch (system) {
     case 'IS_REPLAY_POOL': {
-      await interruptRunner([
+      const interrupted = await interruptRunner(ticket.timedOut, [
         () => ticket.origMsg.author.send(isSC2ReplayReminder),
         () => sleep(10 * 1000),
         () => ticket.origMsg.author.send(isSC2Fail),
       ]);
+      if (interrupted) return;
       ticket.rej("User didn't confirm if msg was a replay - timed out.");
       await sleep(10 * 1000);
       await delAllMsgs({ DMIds: ticket.origMsg.author.id });
       return;
     }
     case 'DATA_VALIDATION_POOL': {
-      await interruptRunner([
+      const interrupted = await interruptRunner([
         () => ticket.origMsg.author.send(missingDataReminder),
         () => sleep(60 * 1000),
         () => ticket.origMsg.author.send(missingDataFail),
       ]);
+      if (interrupted) return;
       ticket.rej("User didn't validate all necessary data - timed out.");
       await sleep(10 * 1000);
       await delAllMsgs({ DMIds: ticket.origMsg.author.id });
@@ -185,20 +188,22 @@ const addToPool = (ticket, pool, timeOutAfter = 5 * 60 * 1000) => {
   ticket.timeOutId = timeOutId;
 };
 
+const getTicketTimeout = pool => {
+  switch (pool.name) {
+    case 'IS_REPLAY_POOL':
+      return 10 * 1000;
+    case 'DATA_VALIDATION_POOL':
+      return 40 * 1000;
+    case 'QUEUE_POOL':
+      return 60 * 60 * 1000;
+    default:
+      console.error(`Wrong name provided (${pool.name})`);
+  }
+};
+
 export const buildTicket = (pool, options) => {
   const ticket = ticketFactory(pool, options);
-  const timeout = (() => {
-    switch (pool.name) {
-      case 'IS_REPLAY_POOL':
-        return 10 * 1000;
-      case 'DATA_VALIDATION_POOL':
-        return 40 * 60;
-      case 'QUEUE_POOL':
-        return 60 * 60 * 1000;
-      default:
-        console.error(`Wrong name provided (${pool.name})`);
-    }
-  })();
+  const timeout = getTicketTimeout(pool);
   addToPool(ticket, pool, timeout);
   return ticket;
 };
@@ -334,9 +339,9 @@ You can omit this error message by specifying your race with:
 
 `,
       action: async answer => {
-        await answer.react(raceEmojis.vsTerran.id);
-        await answer.react(raceEmojis.vsZerg.id);
-        await answer.react(raceEmojis.vsProtoss.id);
+        await answer.react(vsRaceEmojis.vsTerran.id);
+        await answer.react(vsRaceEmojis.vsZerg.id);
+        await answer.react(vsRaceEmojis.vsProtoss.id);
       },
     },
     playingAs: {
@@ -418,6 +423,12 @@ export const handleMissingData = async (msg, playingAgainst, playingAs, rank, ur
   return lock;
 };
 
+/**
+ * @param {{object}} obj Any Object
+ * @param {{(Array|string)}} propPath The path to set of the object
+ * @param {*} value Any value to set at path
+ * @returns {void}
+ */
 const deepSetObj = (obj, propPath, value) => {
   if (typeof propPath === 'string') propPath = propPath.split('.');
   const curProperty = propPath.shift();
@@ -428,10 +439,14 @@ const deepSetObj = (obj, propPath, value) => {
   obj[curProperty] = value;
 };
 
-const emojiInteractions = {};
+/**
+ * @typedef Pool
+ * @type {Object.<string, Tickets>}
+ * @type {string} name Name of the pool (on proto)
+ */
 
 /**
- * @typedef EmojiGroupContent
+ * @typedef EmojisAndMethods
  * @type {Object}
  * @prop {string[]} emojis All emojis belonging to the group
  * @prop {function} onAdd Runs when the group is unlocked
@@ -440,21 +455,48 @@ const emojiInteractions = {};
  * @prop {function} onDel Runs when the user removes a reaction belonging to this group.
  */
 /**
+ * @typedef EmojiGroupName
+ * @type {string} Unique name of the group
+ */
+/**
+ * @typedef GroupWithEmojisAndMethods
+ * @type {Object.<string, EmojisAndMethods>}
+ */
+/**
+ * @type {Object.<string, GroupWithEmojisAndMethods>}
+ */
+const emojiInteractions = {};
+
+/**
  * @param {object} pool INSTANCE OF POOL
- * @param {Object.<string, EmojiGroupContent>} groups
+ * @param {GroupWithEmojisAndMethods} groups
  */
 export const registerEmojiInteraction = (pool, groups) => {
-  // TODO : finish `registerEmojiInteraction` function.
-  // TODO : add onAdd and onDel handlers to EmojiGroups
+  for (let key in groups) {
+    deepSetObj(emojiInteractions, [pool.name, key], groups[key]);
+  }
 };
 
 // TODO : Refactor register EmojiInteraction to init
+const onAddHelper = (ticket, emoji, assignee, emojiGroup) => {
+  for (let emojiName in emojiGroup) {
+    if (emojiGroup[emojiName].id === emoji) {
+      ticket[assignee] = emojiName;
+      return;
+    }
+  }
+  console.error(
+    `Could not find emoji (${emoji}) in ticket (${ticket}). ${assignee}.onAdd()`
+  );
+};
 registerEmojiInteraction(IS_REPLAY_POOL, { binaryAction: { emojis: ['✅', '🛑'] } });
 registerEmojiInteraction(DATA_VALIDATION_POOL, {
   race: {
     emojis: [raceEmojis.terran.id, raceEmojis.zerg.id, raceEmojis.protoss.id],
-    onAdd: () => {},
-    onDel: () => {},
+    onAdd: (ticket, emoji) => onAddHelper(ticket, emoji, 'race', raceEmojis),
+    onDel: ticket => {
+      ticket.race = false;
+    },
   },
   rank: {
     emojis: [
@@ -464,33 +506,40 @@ registerEmojiInteraction(DATA_VALIDATION_POOL, {
       rankEmojis.platinum.id,
       rankEmojis.diamond.id,
     ],
+    onAdd: (ticket, emoji) => onAddHelper(ticket, emoji, 'rank', rankEmojis),
+    onDel: ticket => {
+      ticket.rank = false;
+    },
   },
   vsrace: {
-    emojis: [raceEmojis.vsTerran.id, raceEmojis.vsZerg.id, raceEmojis.vsProtoss.id],
+    emojis: [vsRaceEmojis.vsTerran.id, vsRaceEmojis.vsZerg.id, vsRaceEmojis.vsProtoss.id],
+    onAdd: (ticket, emoji) => onAddHelper(ticket, emoji, 'vsRace', vsRaceEmojis),
+    onDel: ticket => {
+      ticket.vsRace = false;
+    },
   },
 });
 
 export const getActualGroup = (emoji, pool) => {
-  const groups = emojiInteractions[pool.name];
-  let actualGroup = false;
-  for (let group in groups) {
-    if (groups[groups].includes(emoji)) {
-      actualGroup = group;
-      break;
-    }
+  const groups = Object.keys(emojiInteractions[pool.name]);
+  let result = false;
+  for (let group of groups) {
+    const emojis = emojiInteractions[pool.name][group].emojis;
+    if (emojis.includes(emoji)) result = group;
   }
-  return actualGroup;
+  return result;
 };
 
 export const lockEmojiInter = (emoji, pool, ticket) => {
   const actualGroup = getActualGroup(emoji, pool);
-  lockEmojiInterWGroup(actualGroup, ticket);
+  lockEmojiInterWGroup(actualGroup, ticket, emoji);
 };
 
-export const lockEmojiInterWGroup = (group, ticket) => {
+export const lockEmojiInterWGroup = (group, ticket, emoji) => {
   const groupIndex = ticket.lockedEmojiInteractionGroups.indexOf(group);
   if (groupIndex !== -1) return console.error(`Group (${group}) already locked down.`);
   ticket.lockedEmojiInteractionGroups.push(group);
+  emojiInteractions[ticket.pool.name][group].onAdd?.(ticket, emoji);
 };
 
 export const freeEmojiInter = (emoji, pool, ticket) => {
@@ -502,6 +551,7 @@ export const freeEmojiInterWGroup = (group, ticket) => {
   const groupIndex = ticket.lockedEmojiInteractionGroups.indexOf(group);
   if (groupIndex === -1) return console.error(`Group (${group}) is already unlocked.`);
   ticket.lockedEmojiInteractionGroups.splice(groupIndex, 1);
+  emojiInteractions[ticket.pool.name][group].onDel?.(ticket);
 };
 
 export const isLocked = (emoji, pool, msg) => {
@@ -522,8 +572,51 @@ export const isLockedwGroup = (emoji, pool, msg, group) => {
   return true;
 };
 
+/**
+ * @param {Message} msg
+ * @param {DiscordUser} user
+ */
+export const handleUserReactedTooFast = (msg, user) => {
+  msg.user.send(reactedTooFast);
+};
+
+/**
+ * @typedef DataFlowEntry
+ * @type {Object}
+ * @prop {boolean} aborted - Defaults to false
+ * @prop {id} id - ID of the DataFlowEntry
+ * @prop {function} remove - Deletes the DataFlowEntry
+ * @prop {function} abort - Aborts the request
+ */
+/**
+ * @type {Object.<string, DataFlowEntry>}
+ */
+export const DATA_FLOW = {};
+
+/**
+ * @param {string} id - Discord message id
+ * @returns {DataFlowEntry} - Returns a dataFlowEntry
+ */
+export const dataFlowFactory = id => {
+  class DataFlow {
+    constructor() {
+      this.id = id;
+      this.aborted = false;
+    }
+  }
+  DataFlow.prototype.remove = () => {
+    delete DATA_FLOW[id];
+  };
+  DataFlow.prototype.abort = () => {
+    DATA_FLOW[id].aborted = true;
+  };
+  const dataFlow = new DataFlow();
+  DATA_FLOW[id] = dataFlow;
+  return dataFlow;
+};
+
 import { client } from './app.js';
-import { User as DiscordUser, DMChannel } from 'discord.js';
+import { User as DiscordUser, DMChannel, Emoji, Message } from 'discord.js';
 import {
   isSC2ReplayReminder,
   isSC2Fail,
@@ -532,6 +625,7 @@ import {
   isSC2Replay,
   missingDataReminder,
   missingDataFail,
+  reactedTooFast,
 } from './messages.js';
 import {
   zShortcuts,
@@ -547,4 +641,4 @@ import {
   pRankCuts,
   dRankCuts,
 } from './config/global.js';
-import { raceEmojis, rankEmojis } from './Emojis.js';
+import { raceEmojis, rankEmojis, vsRaceEmojis } from './Emojis.js';
