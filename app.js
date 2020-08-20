@@ -1,10 +1,5 @@
 export const client = new Discord.Client();
 
-const clearTTimeout = ticket => {
-  clearTimeout(ticket.timeOutId);
-  ticket.timedOut = 0;
-};
-
 (async () => {
   const allCoachIds = await getCoaches();
   const coaches = ['145856913014259712'];
@@ -17,7 +12,7 @@ const clearTTimeout = ticket => {
       console.log('User tried to provide wrong emote : ' + msgReact._emoji.name);
     const msgInPool = isPartOfPool(msgReact.message.id);
     if (!msgInPool) {
-      handleUserReactedTooFast(msgReact.message, user);
+      await handleUserReactedTooFast(msgReact, user);
       return console.error('User reacted on a message that is not in the message Pool');
     }
     switch (msgInPool) {
@@ -34,15 +29,18 @@ const clearTTimeout = ticket => {
           case '✅': {
             const ticket = IS_REPLAY_POOL[msgReact.message.id];
             clearTTimeout(ticket);
-            await ticket.origMsg.delete();
-            ticket.res();
+            // TODO : Put this (await ticket.origMsg.delete();) in after the message has been verified that all data is on it.
+            // await ticket.origMsg.delete();
+            DATA_FLOW[msgReact.message.channel.recipient.id].resolveInd(0);
             delete IS_REPLAY_POOL[msgReact.message.id];
             return;
           }
           case '🛑': {
             const ticket = IS_REPLAY_POOL[msgReact.message.id];
             clearTTimeout(ticket);
-            ticket.rej('Was not a replay.');
+            DATA_FLOW[msgReact.message.channel.recipient.id]
+              .abort()
+              .rejectAll('Not a replay');
             await msgReact.message.channel.send(isNotSC2Replay);
             await sleep(10 * 1000);
             await delAllMsgs({ DMChannels: msgReact.message.channel });
@@ -132,18 +130,10 @@ const clearTTimeout = ticket => {
     const [hasReplay, url, urlArr] = getMsgAttachments(msg);
     const { playingAgainst, playingAs, rank, replay } = whichDataPresent(msg);
     if (!hasReplay) return;
-    const dataFlow = dataFlowFactory(msg.id);
     try {
-      interruptRunner(dataFlow.aborted, [
-        async () => {
-          const [replayL] = await handleConfIsReplay(replay, msg, url);
-          await replayL;
-        },
-        async () => {
-          // prettier-ignore
-          const [misDataL] = await handleMissingData(msg, playingAgainst, playingAs, rank, url);
-          await misDataL;
-        },
+      newInterruptRunner(undefined, msg.author.id, [
+        () => handleConfIsReplay(replay, msg, url),
+        () => handleMissingData(msg, playingAgainst, playingAs, rank, url),
         () => handleConfirmation(),
       ]);
     } catch (e) {
@@ -166,6 +156,7 @@ import {
   isPartOfPool,
   delAllMsgs,
   whichDataPresent,
+  clearTTimeout,
 } from './utils.js';
 import { writeFileSync, readFileSync } from 'fs';
 import { confirmIsReplayMsg, isNotSC2Replay, isSC2Replay } from './messages.js';
@@ -182,6 +173,8 @@ import {
   getActualGroup,
   dataFlowFactory,
   handleUserReactedTooFast,
-  interruptRunner,
+  //   interruptRunner,
+  newInterruptRunner,
 } from './utils.js';
 import { allEmojis } from './Emojis.js';
+import { DATA_FLOW } from './utils.js';

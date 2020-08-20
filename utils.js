@@ -1,7 +1,26 @@
 /* eslint-disable indent */
+/** @typedef { [Promise, Function, Function]} Lock */
+
 /**
- * @typedef {{[Promise, function, function]}} Lock
+ * @typedef DataFlowEntry
+ * @type {object}
+ * @prop {boolean} aborted - Defaults to false
+ * @prop {string} id - ID of the DataFlowEntry
+ * @prop {function} remove - Deletes the DataFlowEntry
+ * @prop {function} abort - Aborts the request
+ * @prop {function[]} rejects - Array that rejects all promises pending in taskrunner
+ * @prop {function} rejectAll - Rejects all promises that are still pending in the taskrunner
+ * @prop {Lock[]} locks - All Locks for the passed functions.
+ * @prop {number} curAction - Current iteration of the action array.
+ * @prop {function} resolve - Resolve the current action that the taskrunner is awaiting
+ * @prop {function} resolveAll - Resolve all actions that the taskrunner is awaiting
+ * @prop {function} resolveInd - Resolve the action with the index of the action.
+ * @prop {function[]} resolves - All resolvables of the locks.
  */
+/**
+ * @type {Object.<string, DataFlowEntry>}
+ */
+export const DATA_FLOW = {};
 
 export const sleep = async time => new Promise(resolve => setTimeout(resolve, time));
 
@@ -38,7 +57,7 @@ export const isPartOfPool = id => {
   }
   return false;
 };
-
+//
 const ticketFactory = (
   pool,
   { id, content, url, origMsg, lock, res, rej, race, vsRace, rank }
@@ -50,7 +69,7 @@ const ticketFactory = (
         hasBeenReactedTo: false,
         reactionHistory: [],
         activatedAt: Date.now(),
-        timedOut: 0,
+        timedOut: false,
         timeOutId: undefined,
         emergency: false,
         lockedEmojiInteractionGroups: [],
@@ -134,42 +153,50 @@ export const delAllMsgs = async ({ DMIds, DMChannels }) => {
   );
 };
 
-export const interruptRunner = async (abortedPtr, actions) => {
-  for (let action of actions) {
-    if (abortedPtr) return true;
-    await action();
-  }
-  return false;
-};
+// /**
+//  *
+//  * @param {boolean} abortedPtr - Boolean inside of an object, so that its a pointer and the value is always up to data
+//  * @param {string=} id - ID of the user, references DATA_FLOW
+//  * @param {function[]} actions - Array of async functions
+//  */
+// export const interruptRunner = async (abortedPtr, id, actions) => {
+//   console.log(abortedPtr, id, actions);
+//   for (let action of actions) {
+//     if (abortedPtr) {
+//       return true;
+//     }
+//     await action();
+//   }
+//   return false;
+// };
 
 const timeOutHandler = async (ticket, system) => {
-  ticket.timedOut += 1;
+  ticket.timedOut = true;
   switch (system) {
     case 'IS_REPLAY_POOL': {
-      const interrupted = await interruptRunner(ticket.timedOut, [
+      const aborted = await newInterruptRunner(!ticket.timedOut, undefined, [
         () => ticket.origMsg.author.send(isSC2ReplayReminder),
         () => sleep(10 * 1000),
         () => ticket.origMsg.author.send(isSC2Fail),
       ]);
-      if (interrupted) return;
+      if (!aborted) return;
       ticket.rej("User didn't confirm if msg was a replay - timed out.");
       await sleep(10 * 1000);
       await delAllMsgs({ DMIds: ticket.origMsg.author.id });
       return;
     }
     case 'DATA_VALIDATION_POOL': {
-      const interrupted = await interruptRunner([
+      const aborted = await newInterruptRunner(!ticket.timedOut, undefined, [
         () => ticket.origMsg.author.send(missingDataReminder),
         () => sleep(60 * 1000),
         () => ticket.origMsg.author.send(missingDataFail),
       ]);
-      if (interrupted) return;
+      if (!aborted) return;
       ticket.rej("User didn't validate all necessary data - timed out.");
       await sleep(10 * 1000);
       await delAllMsgs({ DMIds: ticket.origMsg.author.id });
       return;
     }
-
     default:
       console.error(new Error(`Wrong system (${system}) provided.`));
   }
@@ -288,13 +315,13 @@ const sendConfirmIsReplay = async msg => {
   return answer;
 };
 
-/** @returns {Lock} */
+/** @returns {Lock} Promise, resolve, reject*/
 const createLock = () => {
   const ptr = {};
   ptr.promise = new Promise((res, rej) => {
     ptr.resolver = res;
     ptr.rejecter = rej;
-  });
+  }).catch(e => console.error(e));
   return [ptr.promise, ptr.resolver, ptr.rejecter];
 };
 
@@ -306,7 +333,6 @@ const createLock = () => {
  * @returns {Lock}
  */
 export const handleConfIsReplay = async (isReplay, msg, url) => {
-  const lock = createLock();
   let answer;
   if (!isReplay) answer = await sendConfirmIsReplay(msg);
   buildTicket(IS_REPLAY_POOL, {
@@ -314,11 +340,7 @@ export const handleConfIsReplay = async (isReplay, msg, url) => {
     content: msg.content,
     url,
     origMsg: msg,
-    lock: lock[0],
-    res: lock[1],
-    rej: lock[2],
   });
-  return lock;
 };
 
 export const handleConfirmation = async msg => {
@@ -327,6 +349,9 @@ export const handleConfirmation = async msg => {
   await delAllMsgs({ DMIds: msg.channel.id });
 };
 
+/**
+ * @param {Message} msg
+ * @returns {[Promise<Message>, [function(Message) => Promise<void>]]} */
 const sendMissingData = async (msg, playingAgainst, playingAs, rank) => {
   const replyOnMissing = {
     playingAgainst: {
@@ -379,6 +404,7 @@ You can omit this error message by specifying your rank with:
       },
     },
   };
+  /** @returns {[string, [function(Message) => Promise<void>]]} */
   const buildResData = () => {
     let result = '';
     const actionArr = [];
@@ -399,15 +425,11 @@ You can omit this error message by specifying your rank with:
   const [errStr, actionArr] = buildResData();
   if (!errStr) return;
   const answer = await msg.author.send(missingDataError(errStr));
-  for (let action of actionArr) {
-    await action(answer);
-  }
-  return answer;
+  return [answer, actionArr];
 };
 
 export const handleMissingData = async (msg, playingAgainst, playingAs, rank, url) => {
-  const lock = createLock();
-  const answer = await sendMissingData(msg, playingAgainst, playingAs, rank);
+  const [answer, actions] = await sendMissingData(msg, playingAgainst, playingAs, rank);
   buildTicket(DATA_VALIDATION_POOL, {
     id: answer.id,
     content: msg.content,
@@ -416,11 +438,10 @@ export const handleMissingData = async (msg, playingAgainst, playingAs, rank, ur
     rank,
     race: playingAs,
     vsRace: playingAgainst,
-    lock: lock[0],
-    res: lock[1],
-    rej: lock[2],
   });
-  return lock;
+  for (let action of actions) {
+    await action(answer);
+  }
 };
 
 /**
@@ -572,36 +593,47 @@ export const isLockedwGroup = (emoji, pool, msg, group) => {
   return true;
 };
 
-/**
- * @param {Message} msg
- * @param {DiscordUser} user
- */
-export const handleUserReactedTooFast = (msg, user) => {
-  msg.user.send(reactedTooFast);
+export const clearTTimeout = ticket => {
+  clearTimeout(ticket.timeOutId);
+  ticket.timedOut = false;
 };
 
 /**
- * @typedef DataFlowEntry
- * @type {Object}
- * @prop {boolean} aborted - Defaults to false
- * @prop {id} id - ID of the DataFlowEntry
- * @prop {function} remove - Deletes the DataFlowEntry
- * @prop {function} abort - Aborts the request
+ * @param {MessageReaction} msgReact
+ * @param {DiscordUser} user
  */
-/**
- * @type {Object.<string, DataFlowEntry>}
- */
-export const DATA_FLOW = {};
+export const handleUserReactedTooFast = async (msgReact, user, ticket) => {
+  // TODO:
+  // clearTTimeout(ticket);
+
+  await user.send(reactedTooFast);
+  const id = msgReact.message.channel.recipient.id;
+  DATA_FLOW[id].abort();
+  try {
+    DATA_FLOW[id]?.rejectAll?.('aborted');
+  } catch (e) {
+    console.error(e);
+  }
+};
 
 /**
- * @param {string} id - Discord message id
- * @returns {DataFlowEntry} - Returns a dataFlowEntry
+ * @param {string} id - DiscordUser id
+ * @param {Lock[]} locks - All locks associated with this dataFlow
+ * @returns {DataFlowEntry} Returns a dataFlowEntry
  */
-export const dataFlowFactory = id => {
+export const dataFlowFactory = (id, locks = []) => {
   class DataFlow {
     constructor() {
       this.id = id;
+      this.curAction = 0;
       this.aborted = false;
+      this.locks = locks;
+    }
+    get rejects() {
+      return this.locks.map(el => el[2]);
+    }
+    get resolves() {
+      return this.locks.map(el => el[1]);
     }
   }
   DataFlow.prototype.remove = () => {
@@ -609,14 +641,77 @@ export const dataFlowFactory = id => {
   };
   DataFlow.prototype.abort = () => {
     DATA_FLOW[id].aborted = true;
+    /** @type {DataFlowEntry}  */
+    return DATA_FLOW[id];
+  };
+  /** @param {string} reason - Reason to reject all pending Promises */
+  DataFlow.prototype.rejectAll = reason => {
+    for (let rej of DATA_FLOW[id].rejects) {
+      rej(reason);
+    }
+    return DATA_FLOW[id];
+  };
+  /** @param {number} index - Index of the action to resolve */
+  DataFlow.prototype.resolveInd = index => {
+    DATA_FLOW[id].locks[index][1]();
+    return DATA_FLOW[id];
+  };
+  DataFlow.prototype.resolve = () => {
+    DATA_FLOW[id].locks[DATA_FLOW[id].curAction][1]();
+    return DATA_FLOW[id];
+  };
+  DataFlow.prototype.resolveAll = () => {
+    DATA_FLOW[id].resolves.forEach(res => res());
+    return DATA_FLOW[id];
   };
   const dataFlow = new DataFlow();
   DATA_FLOW[id] = dataFlow;
   return dataFlow;
 };
 
+/**
+ *
+ * @param {boolean | string | undefined} abortPtr - Boolean inside Pointer to abort execution of
+ *                                      a next function block
+ *                                    - If supplied string, the pointer will be assigned
+ *                                      to the entry in dataFlow with the key being the
+ *                                      string
+ *                                    - If undefined will just use the internal abort of dataFlow
+ * @param {string | undefined} dataFlowId - Discord.User.id
+ * @param {Array.<function(): promise>} actions - Array of async functions
+ */
+export const newInterruptRunner = async (
+  abortPtr = true,
+  dataFlowId = false,
+  actions
+) => {
+  const locks = Array.from(Array(actions.length), () => createLock());
+  const dataFlow = dataFlowId
+    ? dataFlowFactory(dataFlowId, locks)
+    : { locks: [], aborted: true };
+  if (typeof abortPtr === 'string')
+    (dataFlow[abortPtr] = false), (abortPtr = dataFlow[abortPtr]);
+  for (let i = 0; i < actions.length; i++) {
+    dataFlow.curAction = i;
+    if (abortPtr && dataFlow.aborted) return true;
+    try {
+      await actions[i]();
+      await locks[i][0];
+    } catch (e) {
+      console.log(e);
+    }
+  }
+  return false;
+};
+
 import { client } from './app.js';
-import { User as DiscordUser, DMChannel, Emoji, Message } from 'discord.js';
+import {
+  User as DiscordUser,
+  DMChannel,
+  Emoji,
+  Message,
+  MessageReaction,
+} from 'discord.js';
 import {
   isSC2ReplayReminder,
   isSC2Fail,
