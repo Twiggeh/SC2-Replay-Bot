@@ -6,16 +6,16 @@
  * @type {object}
  * @prop {boolean} aborted - Defaults to false
  * @prop {string} id - ID of the DataFlowEntry
- * @prop {function} remove - Deletes the DataFlowEntry
- * @prop {function} abort - Aborts the request
- * @prop {function[]} rejects - Array that rejects all promises pending in taskrunner
- * @prop {function} rejectAll - Rejects all promises that are still pending in the taskrunner
+ * @prop {function() => DataFlowEntry} remove - Deletes the DataFlowEntry
+ * @prop {function() => DataFlowEntry} abort - Aborts the request
+ * @prop {[function() => DataFlowEntry]} rejects - Array that rejects all promises pending in taskrunner
+ * @prop {function() => DataFlowEntry} rejectAll - Rejects all promises that are still pending in the taskrunner
  * @prop {Lock[]} locks - All Locks for the passed functions.
  * @prop {number} curAction - Current iteration of the action array.
- * @prop {function} resolve - Resolve the current action that the taskrunner is awaiting
- * @prop {function} resolveAll - Resolve all actions that the taskrunner is awaiting
- * @prop {function} resolveInd - Resolve the action with the index of the action.
- * @prop {function[]} resolves - All resolvables of the locks.
+ * @prop {function() => DataFlowEntry} resolve - Resolve the current action that the taskrunner is awaiting
+ * @prop {function() => DataFlowEntry} resolveAll - Resolve all actions that the taskrunner is awaiting
+ * @prop {function() => DataFlowEntry} resolveInd - Resolve the action with the index of the action.
+ * @prop {[function() => DataFlowEntry]} resolves - All resolvables of the locks.
  */
 /**
  * @type {Object.<string, DataFlowEntry>}
@@ -90,7 +90,7 @@ const ticketFactory = (
         hasBeenReactedTo: false,
         reactionHistory: [],
         activatedAt: Date.now(),
-        timedOut: 0,
+        timedOut: false,
         timeOutId: undefined,
         emergency: false,
         lockedEmojiInteractionGroups: [],
@@ -174,25 +174,35 @@ const timeOutHandler = async (ticket, system) => {
   ticket.timedOut = true;
   switch (system) {
     case 'IS_REPLAY_POOL': {
-      const aborted = await newInterruptRunner(!ticket.timedOut, undefined, [
-        () => ticket.origMsg.author.send(isSC2ReplayReminder),
-        () => sleep(10 * 1000),
-        () => ticket.origMsg.author.send(isSC2Fail),
-      ]);
-      if (!aborted) return;
-      ticket.rej("User didn't confirm if msg was a replay - timed out.");
+      const aborted = await newInterruptRunner({
+        abortPtr: ticket,
+        abortPath: 'timedOut',
+        negatePtr: true,
+        actions: [
+          () => ticket.origMsg.author.send(isSC2ReplayReminder),
+          () => sleep(10 * 1000),
+          () => ticket.origMsg.author.send(isSC2Fail),
+        ],
+      });
+      if (aborted) return;
+      DATA_FLOW[ticket.origMsg.author.id].abort().rejectAll().remove();
       await sleep(10 * 1000);
       await delAllMsgs({ DMIds: ticket.origMsg.author.id });
       return;
     }
     case 'DATA_VALIDATION_POOL': {
-      const aborted = await newInterruptRunner(!ticket.timedOut, undefined, [
-        () => ticket.origMsg.author.send(missingDataReminder),
-        () => sleep(60 * 1000),
-        () => ticket.origMsg.author.send(missingDataFail),
-      ]);
-      if (!aborted) return;
-      ticket.rej("User didn't validate all necessary data - timed out.");
+      const aborted = await newInterruptRunner({
+        abortPtr: ticket,
+        abortPath: 'timedOut',
+        negatePtr: true,
+        actions: [
+          () => ticket.origMsg.author.send(missingDataReminder),
+          () => sleep(60 * 1000),
+          () => ticket.origMsg.author.send(missingDataFail),
+        ],
+      });
+      if (aborted) return;
+      DATA_FLOW[ticket.origMsg.author.id].abort().rejectAll().remove();
       await sleep(10 * 1000);
       await delAllMsgs({ DMIds: ticket.origMsg.author.id });
       return;
@@ -541,7 +551,20 @@ registerEmojiInteraction(DATA_VALIDATION_POOL, {
   },
 });
 
-export const getActualGroup = (emoji, pool) => {
+/** @param {MessageReaction} msgReact @returns {string} ID of the recipient */
+export const getRecipId = msgReact => msgReact.message.channel.recipient.id;
+
+/** @param {MessageReaction} msgReact @returns {string} Name or ID of the emoji */
+const emojiFromMsgReact = msgReact =>
+  msgReact._emoji.id === null ? msgReact._emoji.name : msgReact._emoji.id;
+
+/**
+ * @param {MessageReaction} msgReact
+ * @param {array} pool
+ * @returns {string | false}
+ */
+export const getActualGroup = (msgReact, pool) => {
+  const emoji = emojiFromMsgReact(msgReact);
   const groups = Object.keys(emojiInteractions[pool.name]);
   let result = false;
   for (let group of groups) {
@@ -551,20 +574,25 @@ export const getActualGroup = (emoji, pool) => {
   return result;
 };
 
-export const lockEmojiInter = (emoji, pool, ticket) => {
-  const actualGroup = getActualGroup(emoji, pool);
-  lockEmojiInterWGroup(actualGroup, ticket, emoji);
+/** @param {MessageReaction} msgReact */
+export const lockEmojiInter = (msgReact, pool, ticket) => {
+  const emoji = emojiFromMsgReact(msgReact);
+  const actualGroup = getActualGroup(msgReact, pool);
+  lockEmojiInterWGroup(actualGroup, ticket, msgReact);
 };
 
-export const lockEmojiInterWGroup = (group, ticket, emoji) => {
+/** @param {string} group @param {ticket} ticket @param {MessageReaction} msgReact  */
+export const lockEmojiInterWGroup = (group, ticket, msgReact) => {
+  const emoji = emojiFromMsgReact(msgReact);
   const groupIndex = ticket.lockedEmojiInteractionGroups.indexOf(group);
   if (groupIndex !== -1) return console.error(`Group (${group}) already locked down.`);
   ticket.lockedEmojiInteractionGroups.push(group);
   emojiInteractions[ticket.pool.name][group].onAdd?.(ticket, emoji);
 };
 
-export const freeEmojiInter = (emoji, pool, ticket) => {
-  const actualGroup = getActualGroup(emoji, pool);
+/** @param {MessageReaction} msgReact */
+export const freeEmojiInter = (msgReact, pool, ticket) => {
+  const actualGroup = getActualGroup(msgReact, pool);
   freeEmojiInterWGroup(actualGroup, ticket);
 };
 
@@ -575,13 +603,25 @@ export const freeEmojiInterWGroup = (group, ticket) => {
   emojiInteractions[ticket.pool.name][group].onDel?.(ticket);
 };
 
-export const isLocked = (emoji, pool, msg) => {
-  const actualGroup = getActualGroup(emoji, pool);
-  return isLockedwGroup(emoji, pool, msg, actualGroup);
+/**
+ * @param {MessageReaction} msgReact
+ * @param {array} pool
+ */
+export const isLocked = (msgReact, pool) => {
+  const emoji = emojiFromMsgReact(msgReact);
+  const actualGroup = getActualGroup(msgReact, pool);
+  return isLockedwGroup(msgReact, pool, actualGroup);
 };
 
-export const isLockedwGroup = (emoji, pool, msg, group) => {
-  const ticket = pool[msg.id];
+/**
+ * @param {MessageReaction} msgReact
+ * @param {array} pool
+ * @param {string | false } group
+ * @returns {boolean}
+ */
+export const isLockedwGroup = (msgReact, pool, group) => {
+  const ticket = pool[msgReact.message.id];
+  const emoji = emojiFromMsgReact(msgReact);
   if (ticket === undefined || !group) {
     console.error(
       `Did not find ticket (${ticket}) or group (${group}) with emoji (${emoji})`
@@ -644,7 +684,9 @@ export const dataFlowFactory = (id, locks = []) => {
     /** @type {DataFlowEntry}  */
     return DATA_FLOW[id];
   };
-  /** @param {string} reason - Reason to reject all pending Promises */
+  /** @param {string} reason - Reason to reject all pending Promises
+   *  @returns {DataFlowEntry}
+   */
   DataFlow.prototype.rejectAll = reason => {
     for (let rej of DATA_FLOW[id].rejects) {
       rej(reason);
@@ -669,34 +711,56 @@ export const dataFlowFactory = (id, locks = []) => {
   return dataFlow;
 };
 
+/**@param {object} obj Object to traverse
+ * @param {string} path Path to the property
+ * @return {*} Property
+ */
+const deepGetObject = (obj, path) => path.split('.').reduce((acc, cur) => acc[cur], obj);
+
+/** @typedef AbortPtrPath - String that points to the location of the boolean abort flag
+ *  @type {string}
+ */
+
 /**
- *
- * @param {boolean | string | undefined} abortPtr - Boolean inside Pointer to abort execution of
+ * @typedef InterruptRunnerConfig
+ * @type {object}
+ * @prop {Array.<function(): promise>} actions - Array of async functions
+ * @prop { {[AbortPtrPath]: boolean} | string } [abortPtr] - Boolean inside Pointer to abort execution of
  *                                      a next function block
  *                                    - If supplied string, the pointer will be assigned
  *                                      to the entry in dataFlow with the key being the
  *                                      string
  *                                    - If undefined will just use the internal abort of dataFlow
- * @param {string | undefined} dataFlowId - Discord.User.id
- * @param {Array.<function(): promise>} actions - Array of async functions
+ * @prop {AbortPtrPath} [abortPath] - String that points to the location of the boolean abort flag
+ * @prop {string} [dataFlowId] - Discord.User.id
+ * @prop {boolean} [negatePtr] - If the pointer is to be negated
  */
-export const newInterruptRunner = async (
+
+/** @param {InterruptRunnerConfig} */
+export const newInterruptRunner = async ({
   abortPtr = true,
+  abortPath,
   dataFlowId = false,
-  actions
-) => {
-  const locks = Array.from(Array(actions.length), () => createLock());
+  actions,
+  negatePtr,
+}) => {
+  // TODO : make abortPtr always a pointer.
   const dataFlow = dataFlowId
-    ? dataFlowFactory(dataFlowId, locks)
+    ? dataFlowFactory(
+        dataFlowId,
+        Array.from(Array(actions.length), () => createLock())
+      )
     : { locks: [], aborted: true };
+  if (typeof abortPtr === 'object') abortPtr = deepGetObject(abortPtr, abortPath);
   if (typeof abortPtr === 'string')
     (dataFlow[abortPtr] = false), (abortPtr = dataFlow[abortPtr]);
+  if (negatePtr) abortPtr = !abortPtr;
   for (let i = 0; i < actions.length; i++) {
     dataFlow.curAction = i;
     if (abortPtr && dataFlow.aborted) return true;
     try {
       await actions[i]();
-      await locks[i][0];
+      await dataFlow.locks[i]?.[0];
     } catch (e) {
       console.log(e);
     }
