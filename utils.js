@@ -736,28 +736,33 @@ const deepGetObject = (obj, path) => path.split('.').reduce((acc, cur) => acc[cu
  * @prop {boolean} [negatePtr] - If the pointer is to be negated
  */
 
+const freshPointer = (abortPtr, abortPath, negatePtr) => {
+  if (abortPtr && abortPath) return deepGetObject(abortPtr, abortPath) ^ negatePtr;
+  return true;
+};
+
 /** @param {InterruptRunnerConfig} */
 export const newInterruptRunner = async ({
-  abortPtr = true,
-  abortPath,
+  abortPtr = false,
+  abortPath = false,
   dataFlowId = false,
   actions,
   negatePtr,
 }) => {
-  // TODO : make abortPtr always a pointer.
   const dataFlow = dataFlowId
     ? dataFlowFactory(
         dataFlowId,
         Array.from(Array(actions.length), () => createLock())
       )
     : { locks: [], aborted: true };
-  if (typeof abortPtr === 'object') abortPtr = deepGetObject(abortPtr, abortPath);
-  if (typeof abortPtr === 'string')
-    (dataFlow[abortPtr] = false), (abortPtr = dataFlow[abortPtr]);
-  if (negatePtr) abortPtr = !abortPtr;
+
+  // if (typeof abortPtr === 'object') abortPtr = deepGetObject(abortPtr, abortPath);
+  // if (typeof abortPtr === 'string')
+  //   (dataFlow[abortPtr] = false), (abortPtr = dataFlow[abortPtr]);
+  // if (negatePtr) abortPtr = !abortPtr;
   for (let i = 0; i < actions.length; i++) {
     dataFlow.curAction = i;
-    if (abortPtr && dataFlow.aborted) return true;
+    if (freshPointer(abortPtr, abortPath, negatePtr) && dataFlow.aborted) return true;
     try {
       await actions[i]();
       await dataFlow.locks[i]?.[0];
