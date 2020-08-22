@@ -72,7 +72,7 @@ export const isPartOfPool = id => {
  */
 /**
  * @typedef TicketFactoryOptions
- * @type  {Object}
+ * @type {Object}
  * @prop {string}     id      - Message ID
  * @prop {string}     content - Message Content
  * @prop {Message}    origMsg - Discord Message
@@ -83,7 +83,7 @@ export const isPartOfPool = id => {
  */
 /**
  * @typedef Ticket
- * @type  {Object}
+ * @type {Object}
  * @prop {string}  id        - Message ID
  * @prop {string}  url       - Url of the first detected replay
  * @prop {Pool}   pool      - Instance of POOL
@@ -103,6 +103,9 @@ export const isPartOfPool = id => {
  * @prop {PlayerRace} race   - Players Race
  * @prop {PlayerRace} vsRace - VsPlayerRank
  * @typedef {Ticket & DV} DV_Ticket
+ */
+/** @typedef AllTickets
+ *  @type {Ticket | DV_Ticket}
  */
 /**
  * @param {Pool} pool Instance of POOL
@@ -599,14 +602,17 @@ export const getActualGroup = (msgReact, pool) => {
   return result;
 };
 
-/** @param {MessageReaction} msgReact */
+/** @param {MessageReaction} msgReact
+ *  @param {Pool}            pool
+ *  @param {AllTickets}      ticket */
 export const lockEmojiInter = (msgReact, pool, ticket) => {
-  const emoji = emojiFromMsgReact(msgReact);
   const actualGroup = getActualGroup(msgReact, pool);
   lockEmojiInterWGroup(actualGroup, ticket, msgReact);
 };
 
-/** @param {string} group @param {ticket} ticket @param {MessageReaction} msgReact  */
+/**@param {string}          group
+ * @param {AllTickets}      ticket
+ * @param {MessageReaction} msgReact */
 export const lockEmojiInterWGroup = (group, ticket, msgReact) => {
   const emoji = emojiFromMsgReact(msgReact);
   const groupIndex = ticket.lockedEmojiInteractionGroups.indexOf(group);
@@ -615,12 +621,16 @@ export const lockEmojiInterWGroup = (group, ticket, msgReact) => {
   emojiInteractions[ticket.pool.name][group].onAdd?.(ticket, emoji);
 };
 
-/** @param {MessageReaction} msgReact */
+/**@param {Pool}            pool
+ * @param {AllTickets}      ticket
+ * @param {MessageReaction} msgReact */
 export const freeEmojiInter = (msgReact, pool, ticket) => {
   const actualGroup = getActualGroup(msgReact, pool);
   freeEmojiInterWGroup(actualGroup, ticket);
 };
 
+/**@param {string}          group
+ * @param {AllTickets}      ticket */
 export const freeEmojiInterWGroup = (group, ticket) => {
   const groupIndex = ticket.lockedEmojiInteractionGroups.indexOf(group);
   if (groupIndex === -1) return console.error(`Group (${group}) is already unlocked.`);
@@ -630,8 +640,7 @@ export const freeEmojiInterWGroup = (group, ticket) => {
 
 /**
  * @param {MessageReaction} msgReact
- * @param {array} pool
- */
+ * @param {Pool} pool */
 export const isLocked = (msgReact, pool) => {
   const emoji = emojiFromMsgReact(msgReact);
   const actualGroup = getActualGroup(msgReact, pool);
@@ -640,10 +649,9 @@ export const isLocked = (msgReact, pool) => {
 
 /**
  * @param {MessageReaction} msgReact
- * @param {array} pool
- * @param {string | false } group
- * @returns {boolean}
- */
+ * @param {Pool} pool
+ * @param {string | false} group
+ * @returns {boolean} */
 export const isLockedwGroup = (msgReact, pool, group) => {
   const ticket = pool[msgReact.message.id];
   const emoji = emojiFromMsgReact(msgReact);
@@ -782,10 +790,6 @@ export const newInterruptRunner = async ({
       )
     : { locks: [], aborted: true };
 
-  // if (typeof abortPtr === 'object') abortPtr = deepGetObject(abortPtr, abortPath);
-  // if (typeof abortPtr === 'string')
-  //   (dataFlow[abortPtr] = false), (abortPtr = dataFlow[abortPtr]);
-  // if (negatePtr) abortPtr = !abortPtr;
   for (let i = 0; i < actions.length; i++) {
     dataFlow.curAction = i;
     if (freshPointer(abortPtr, abortPath, negatePtr) && dataFlow.aborted) return true;
@@ -800,13 +804,7 @@ export const newInterruptRunner = async ({
 };
 
 import { client } from './app.js';
-import {
-  User as DiscordUser,
-  DMChannel,
-  Emoji,
-  Message,
-  MessageReaction,
-} from 'discord.js';
+import { User as DiscordUser, DMChannel, Message, MessageReaction } from 'discord.js';
 import {
   isSC2ReplayReminder,
   isSC2Fail,
