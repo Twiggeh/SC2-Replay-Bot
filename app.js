@@ -9,6 +9,7 @@ export const client = new Discord.Client();
   client.on('messageReactionAdd', async (msgReact, user) => {
     if (user.bot) return;
     // TODO : Coaches cannot be coached.
+    // TODO : Implement filter, right now all messages that are reacted to get pushed through here
 
     const badEmoji = () =>
       console.log('User tried to provide wrong emote : ' + msgReact._emoji.name);
@@ -37,7 +38,7 @@ export const client = new Discord.Client();
           case '🛑': {
             const ticket = IS_REPLAY_POOL[msgReact.message.id];
             clearTTimeout(ticket);
-            DATA_FLOW[getRecipId(msgReact)].abort().rejectAll('Not a replay');
+            DATA_FLOW[getRecipId(msgReact)].abort().rejectAll('Not a replay').remove();
             await msgReact.message.channel.send(isNotSC2Replay);
             await sleep(10 * 1000);
             await delAllMsgs({ DMChannels: msgReact.message.channel });
@@ -49,6 +50,7 @@ export const client = new Discord.Client();
         }
       }
       case 'DATA_VALIDATION_POOL': {
+        // TODO : add the functionality to extend timeouts to handleTimeout
         let isCorrectEmoji = 0;
         for (let key in allEmojis) {
           const emoji = allEmojis[key];
@@ -60,10 +62,24 @@ export const client = new Discord.Client();
         const locked = isLocked(msgReact, DATA_VALIDATION_POOL);
         if (locked) return;
 
+        const ticket = DATA_VALIDATION_POOL[msgReact.message.id];
         const group = getActualGroup(msgReact, DATA_VALIDATION_POOL);
-        lockEmojiInterWGroup(group, DATA_VALIDATION_POOL[msgReact.message.id], msgReact);
+        lockEmojiInterWGroup(group, ticket, msgReact);
 
-        // TODO : add the functionality to extend timeouts to handleTimeout
+        const hasAllEmojies = hasAllProperties(
+          DATA_VALIDATION_POOL[msgReact.message.id],
+          ['race', 'rank', 'vsRace']
+        );
+        if (hasAllEmojies) {
+          // Put into Coaches' Queue
+          clearTTimeout(ticket);
+          ticket.timedOut = false;
+          DATA_FLOW[getRecipId(msgReact)].resolveAll().remove();
+
+          console.log('all emojies were received.');
+        }
+        // extend timeout.
+        // TODO : Has to have max time that the timeout can be extended.
 
         return;
       }
@@ -90,6 +106,7 @@ export const client = new Discord.Client();
   });
 
   client.on('messageReactionRemove', async (msgReact, user) => {
+    // TODO : Filter messages.
     const msgInPool = isPartOfPool(msgReact.message.id);
     if (!msgInPool) {
       handleUserReactedTooFast(user);
@@ -99,11 +116,7 @@ export const client = new Discord.Client();
     }
     switch (msgInPool) {
       case 'DATA_VALIDATION_POOL': {
-        freeEmojiInter(
-          msgReact,
-          DATA_VALIDATION_POOL,
-          DATA_VALIDATION_POOL[msgReact.message.id]
-        );
+        freeEmojiInter(msgReact, DATA_VALIDATION_POOL[msgReact.message.id]);
         return;
       }
       default:
@@ -115,7 +128,7 @@ export const client = new Discord.Client();
 
   client.on('message', async msg => {
     if (!shouldHandleMsg(msg)) return;
-    await delAllMsgs({ DMIds: coaches });
+    await delAllMsgs({ UserIDs: coaches });
     const [hasReplay, url, urlArr] = getMsgAttachments(msg);
     const { playingAgainst, playingAs, rank, replay } = whichDataPresent(msg);
     if (!hasReplay) return;
@@ -125,7 +138,7 @@ export const client = new Discord.Client();
         actions: [
           () => handleConfIsReplay(replay, msg, url),
           () => handleMissingData(msg, playingAgainst, playingAs, rank, url),
-          () => handleConfirmation(),
+          () => handleConfirmation(msg),
         ],
       });
     } catch (e) {
@@ -150,6 +163,7 @@ import {
   whichDataPresent,
   clearTTimeout,
   getRecipId,
+  hasAllProperties,
 } from './utils.js';
 import { writeFileSync, readFileSync } from 'fs';
 import { confirmIsReplayMsg, isNotSC2Replay, isSC2Replay } from './messages.js';

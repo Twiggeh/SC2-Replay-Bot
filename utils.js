@@ -1,8 +1,7 @@
 /* eslint-disable indent */
 /** @typedef { [Promise, Function, Function]} Lock */
 
-/**
- * @typedef DataFlowEntry
+/**@typedef DataFlowEntry
  * @type {object}
  * @prop {boolean} aborted - Defaults to false
  * @prop {string} id - ID of the DataFlowEntry
@@ -15,8 +14,8 @@
  * @prop {function() => DataFlowEntry} resolve - Resolve the current action that the taskrunner is awaiting
  * @prop {function() => DataFlowEntry} resolveAll - Resolve all actions that the taskrunner is awaiting
  * @prop {function() => DataFlowEntry} resolveInd - Resolve the action with the index of the action.
- * @prop {[function() => DataFlowEntry]} resolves - All resolvables of the locks.
- */
+ * @prop {[function() => DataFlowEntry]} resolves - All resolvables of the locks. */
+
 /** @type {Object<string, DataFlowEntry>} */
 export const DATA_FLOW = {};
 
@@ -30,10 +29,9 @@ export const shouldHandleMsg = msg => {
   if (msg.channel.name !== 'replays-1' && msg.channel.name !== 'replays-2') return false;
   return true;
 };
-/** @typedef Pool
+/**@typedef Pool
  * @type {Object<string, Ticket>}
- * @prop {string} name - Name of the Pool
- */
+ * @prop {string} name - Name of the Pool */
 // TODO : Refactor into provider (Pools Provider)
 /**  @type {Object<string, Pool> } */
 const POOLS = {};
@@ -66,7 +64,7 @@ export const isPartOfPool = id => {
  * @type {false | "bronze" | "silver"   | "gold"  | "platinum" | "diamond"} Players Rank
  * @typedef PlayerRace
  * @type {false | "zerg"   | "terran"   | "protoss"} Players Race
- * @typedef PlayerRace
+ * @typedef EnemyRace
  * @type {false | "vsZerg" | "vsTerran" | "vsProtoss"} VsPlayerRank */
 
 /**@typedef TicketFactoryOptions
@@ -77,7 +75,7 @@ export const isPartOfPool = id => {
  * @prop {string}     url     - Url of the first detected replay
  * @prop {PlayerRank} rank    - Players Rank
  * @prop {PlayerRace} race    - Players Race
- * @prop {PlayerRace} vsRace  - VsPlayerRank */
+ * @prop {EnemyRace}  vsRace  - VsPlayerRank */
 
 /**@typedef Ticket
  * @type {Object}
@@ -151,9 +149,9 @@ const delFromAllPools = id => {
   }
 };
 
-/**@param {{DmIds: string[] | string, DMChannels: DMChannel[] | DMChannel}} input */
-export const delAllMsgs = async ({ DMIds, DMChannels }) => {
-  if (DMIds !== undefined && !Array.isArray(DMIds)) DMIds = [DMIds];
+/**@param {{UserIDs: string[] | string, DMChannels: DMChannel[] | DMChannel}} input */
+export const delAllMsgs = async ({ UserIDs, DMChannels }) => {
+  if (UserIDs !== undefined && !Array.isArray(UserIDs)) UserIDs = [UserIDs];
   if (DMChannels !== undefined && !Array.isArray(DMChannels)) DMChannels = [DMChannels];
   const filterSettled = obj => {
     if (obj.status === 'fulfilled') return obj.value;
@@ -161,9 +159,9 @@ export const delAllMsgs = async ({ DMIds, DMChannels }) => {
     console.error(obj.reason);
   };
   const fetchedDms = [];
-  if (DMIds) {
+  if (UserIDs) {
     const dmBuffer = [];
-    DMIds.forEach(id => {
+    UserIDs.forEach(id => {
       const User = new DiscordUser(client, { id });
       dmBuffer.push(User.createDM());
     });
@@ -206,7 +204,7 @@ const timeOutHandler = async (ticket, system) => {
       if (aborted) return;
       DATA_FLOW[ticket.origMsg.author.id].abort().rejectAll().remove();
       await sleep(10 * 1000);
-      await delAllMsgs({ DMIds: ticket.origMsg.author.id });
+      await delAllMsgs({ UserIDs: ticket.origMsg.author.id });
       return;
     }
     case 'DATA_VALIDATION_POOL': {
@@ -223,7 +221,7 @@ const timeOutHandler = async (ticket, system) => {
       if (aborted) return;
       DATA_FLOW[ticket.origMsg.author.id].abort().rejectAll().remove();
       await sleep(10 * 1000);
-      await delAllMsgs({ DMIds: ticket.origMsg.author.id });
+      await delAllMsgs({ UserIDs: ticket.origMsg.author.id });
       return;
     }
     default:
@@ -366,10 +364,12 @@ export const handleConfIsReplay = async (isReplay, msg, url) => {
   });
 };
 
+// TODO : Add available coaches as a parameter to SC2Replay and handleConfirmation
+/** @param {Message} msg*/
 export const handleConfirmation = async msg => {
   await msg.author.send(isSC2Replay(1));
   await sleep(10 * 1000);
-  await delAllMsgs({ DMIds: msg.channel.id });
+  await delAllMsgs({ UserIDs: msg.author.id });
 };
 
 /**
@@ -451,6 +451,11 @@ You can omit this error message by specifying your rank with:
   return [answer, actionArr];
 };
 
+/**@param {Message}    msg
+ * @param {PlayerRace} playingAs
+ * @param {PlayerRank} rank
+ * @param {EnemyRace}  playingAgainst
+ * @param {string}     url*/
 export const handleMissingData = async (msg, playingAgainst, playingAs, rank, url) => {
   const [answer, actions] = await sendMissingData(msg, playingAgainst, playingAs, rank);
   buildTicket(DATA_VALIDATION_POOL, {
@@ -561,8 +566,8 @@ export const getRecipId = msgReact => msgReact.message.channel.recipient.id;
 const emojiFromMsgReact = msgReact =>
   msgReact._emoji.id === null ? msgReact._emoji.name : msgReact._emoji.id;
 
-/**@param {MessageReaction} msgReact
- * @param {array} pool
+/**@param {Pool} pool
+ * @param {MessageReaction} msgReact
  * @returns {string | false} */
 export const getActualGroup = (msgReact, pool) => {
   const emoji = emojiFromMsgReact(msgReact);
@@ -576,10 +581,9 @@ export const getActualGroup = (msgReact, pool) => {
 };
 
 /** @param {MessageReaction} msgReact
- *  @param {Pool}            pool
  *  @param {AllTickets}      ticket */
-export const lockEmojiInter = (msgReact, pool, ticket) => {
-  const actualGroup = getActualGroup(msgReact, pool);
+export const lockEmojiInter = (msgReact, ticket) => {
+  const actualGroup = getActualGroup(msgReact, ticket.pool);
   lockEmojiInterWGroup(actualGroup, ticket, msgReact);
 };
 
@@ -594,11 +598,10 @@ export const lockEmojiInterWGroup = (group, ticket, msgReact) => {
   emojiInteractions[ticket.pool.name][group].onAdd?.(ticket, emoji);
 };
 
-/**@param {Pool}            pool
- * @param {AllTickets}      ticket
+/**@param {AllTickets}      ticket
  * @param {MessageReaction} msgReact */
-export const freeEmojiInter = (msgReact, pool, ticket) => {
-  const actualGroup = getActualGroup(msgReact, pool);
+export const freeEmojiInter = (msgReact, ticket) => {
+  const actualGroup = getActualGroup(msgReact, ticket.pool);
   freeEmojiInterWGroup(actualGroup, ticket);
 };
 
@@ -614,9 +617,17 @@ export const freeEmojiInterWGroup = (group, ticket) => {
 /**@param {MessageReaction} msgReact
  * @param {Pool} pool */
 export const isLocked = (msgReact, pool) => {
-  const emoji = emojiFromMsgReact(msgReact);
   const actualGroup = getActualGroup(msgReact, pool);
   return isLockedwGroup(msgReact, pool, actualGroup);
+};
+
+/** @param {string[]} props @param {Object} obj @return {Boolean}*/
+export const hasAllProperties = (obj, props) => {
+  const result = [];
+  for (let key of props) {
+    result.push(!!deepGetObject(obj, key));
+  }
+  return result.reduce((acc, cur) => acc & cur);
 };
 
 /** @param {MessageReaction} msgReact
