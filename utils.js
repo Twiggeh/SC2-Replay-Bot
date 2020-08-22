@@ -62,16 +62,14 @@ export const isPartOfPool = id => {
   }
   return false;
 };
-/**
- * @typedef PlayerRank
+/**@typedef PlayerRank
  * @type {false | "bronze" | "silver"   | "gold"  | "platinum" | "diamond"} Players Rank
  * @typedef PlayerRace
  * @type {false | "zerg"   | "terran"   | "protoss"} Players Race
  * @typedef PlayerRace
- * @type {false | "vsZerg" | "vsTerran" | "vsProtoss"} VsPlayerRank
- */
-/**
- * @typedef TicketFactoryOptions
+ * @type {false | "vsZerg" | "vsTerran" | "vsProtoss"} VsPlayerRank */
+
+/**@typedef TicketFactoryOptions
  * @type {Object}
  * @prop {string}     id      - Message ID
  * @prop {string}     content - Message Content
@@ -79,14 +77,13 @@ export const isPartOfPool = id => {
  * @prop {string}     url     - Url of the first detected replay
  * @prop {PlayerRank} rank    - Players Rank
  * @prop {PlayerRace} race    - Players Race
- * @prop {PlayerRace} vsRace  - VsPlayerRank
- */
-/**
- * @typedef Ticket
+ * @prop {PlayerRace} vsRace  - VsPlayerRank */
+
+/**@typedef Ticket
  * @type {Object}
  * @prop {string}  id        - Message ID
  * @prop {string}  url       - Url of the first detected replay
- * @prop {Pool}   pool      - Instance of POOL
+ * @prop {Pool}    pool      - Instance of POOL
  * @prop {string}  content   - Message Content
  * @prop {Message} origMsg   - Discord Message
  * @prop {boolean} timedOut  - Whether the message has timed out
@@ -94,23 +91,19 @@ export const isPartOfPool = id => {
  * @prop {boolean} emergency - If this ticket has been neglected for too long.
  * @prop {boolean} hasBeenReactedTo - If the Ticket has received a User's reaction
  * @prop {Array}   reactionHistory  - The emoji reaction history
- * @prop {string}  activatedAt      - The time at which the ticket got created
- */
-/**
- * @typedef {Object} DV
- * @prop {sting[]} lockedEmojiInteractionGroups - All groups that have been locked from being interacted.
+ * @prop {string}  activatedAt      - The time at which the ticket got created */
+/**@typedef {Object} DV
  * @prop {PlayerRank} rank   - Players Rank
  * @prop {PlayerRace} race   - Players Race
  * @prop {PlayerRace} vsRace - VsPlayerRank
- * @typedef {Ticket & DV} DV_Ticket
- */
-/** @typedef AllTickets
- *  @type {Ticket | DV_Ticket}
- */
-/**
- * @param {Pool} pool Instance of POOL
- * @param {TicketFactoryOptions} param1
- */
+ * @prop {sting[]} lockedEmojiInteractionGroups - All groups that have been locked from being interacted.
+ * @typedef {Ticket & DV} DV_Ticket */
+
+/**@typedef AllTickets
+ * @type {Ticket | DV_Ticket} */
+
+/**@param {Pool} pool Instance of POOL
+ * @param {TicketFactoryOptions} param1 */
 const ticketFactory = (pool, { id, content, url, origMsg, race, vsRace, rank }) => {
   switch (pool.name) {
     case 'DATA_VALIDATION_POOL':
@@ -158,9 +151,7 @@ const delFromAllPools = id => {
   }
 };
 
-/**
- * @param {{DmIds: string[] | string, DMChannels: DMChannel[] | DMChannel}} input
- */
+/**@param {{DmIds: string[] | string, DMChannels: DMChannel[] | DMChannel}} input */
 export const delAllMsgs = async ({ DMIds, DMChannels }) => {
   if (DMIds !== undefined && !Array.isArray(DMIds)) DMIds = [DMIds];
   if (DMChannels !== undefined && !Array.isArray(DMChannels)) DMChannels = [DMChannels];
@@ -281,13 +272,11 @@ const includesAny = (str, arr) => {
   return Boolean(result);
 };
 
-/**
- * @returns {{playingAs      : false | "zerg" | "terran" | "protoss",
+/**@returns {{playingAs      : false | "zerg" | "terran" | "protoss",
               playingAgainst : false | "zerg" | "terran" | "protoss",
               isReplay       : boolean,
               rank           : false | "bronze" | "silver" | "gold" | "platinum" | "diamond",
-            }}
- */
+            }} */
 export const whichDataPresent = msg => {
   const lowerMsg = msg.content.toLowerCase();
   return {
@@ -320,13 +309,12 @@ export const whichDataPresent = msg => {
   };
 };
 
-/**
- * @typedef {Boolean} msgHasReplay If the message contains a replay.
+/**@typedef {Boolean} msgHasReplay If the message contains a replay.
  * @typedef {string} url The Url that contains the replay message.
  * @typedef {string[]} UrlArray All urls found inside message.
  * @typedef {MessageAttachment[]} AttachArr All attachments found inside message.
- * @typedef {[msgHasReplay, UrlArray, AttachArr]} SpecialReturn
- */
+ * @typedef {[msgHasReplay, UrlArray, AttachArr]} SpecialReturn */
+
 /** @returns {SpecialReturn} */
 export const getMsgAttachments = msg => {
   const urlArr = [];
@@ -363,13 +351,10 @@ const createLock = () => {
   return [ptr.promise, ptr.resolver, ptr.rejecter];
 };
 
-/**
- *
- * @param {boolean} isReplay
+/**@param {boolean} isReplay
  * @param {Message} msg
  * @param {string} url
- * @returns {Lock}
- */
+ * @returns {Lock} */
 export const handleConfIsReplay = async (isReplay, msg, url) => {
   let answer;
   if (!isReplay) answer = await sendConfirmIsReplay(msg);
@@ -486,8 +471,7 @@ export const handleMissingData = async (msg, playingAgainst, playingAs, rank, ur
  * @param {{object}} obj Any Object
  * @param {{(Array|string)}} propPath The path to set of the object
  * @param {*} value Any value to set at path
- * @returns {void}
- */
+ * @returns {void} */
 const deepSetObj = (obj, propPath, value) => {
   if (typeof propPath === 'string') propPath = propPath.split('.');
   const curProperty = propPath.shift();
@@ -498,38 +482,29 @@ const deepSetObj = (obj, propPath, value) => {
   obj[curProperty] = value;
 };
 
-/**
- * @typedef Pool
+/**@typedef Pool
  * @type {Object.<string, Tickets>}
- * @type {string} name Name of the pool (on proto)
- */
+ * @type {string} name Name of the pool (on proto) */
 
-/**
- * @typedef EmojisAndMethods
+/**@typedef EmojisAndMethods
  * @type {Object}
  * @prop {string[]} emojis All emojis belonging to the group
  * @prop {function} onAdd Runs when the group is unlocked
  *                        (no other emoji in the group is active),
  *                        and the user reacts with an emoji from this group.
- * @prop {function} onDel Runs when the user removes a reaction belonging to this group.
- */
-/**
- * @typedef EmojiGroupName
- * @type {string} Unique name of the group
- */
-/**
- * @typedef GroupWithEmojisAndMethods
- * @type {Object.<string, EmojisAndMethods>}
- */
-/**
- * @type {Object.<string, GroupWithEmojisAndMethods>}
- */
+ * @prop {function} onDel Runs when the user removes a reaction belonging to this group. */
+
+/**@typedef EmojiGroupName
+ * @type {string} Unique name of the group */
+
+/**@typedef GroupWithEmojisAndMethods
+ * @type {Object.<string, EmojisAndMethods>} */
+
+/** @type {Object.<string, GroupWithEmojisAndMethods>} */
 const emojiInteractions = {};
 
-/**
- * @param {Pool} pool INSTANCE OF POOL
- * @param {GroupWithEmojisAndMethods} groups
- */
+/**@param {Pool} pool INSTANCE OF POOL
+ * @param {GroupWithEmojisAndMethods} groups */
 export const registerEmojiInteraction = (pool, groups) => {
   for (let key in groups) {
     deepSetObj(emojiInteractions, [pool.name, key], groups[key]);
@@ -586,11 +561,9 @@ export const getRecipId = msgReact => msgReact.message.channel.recipient.id;
 const emojiFromMsgReact = msgReact =>
   msgReact._emoji.id === null ? msgReact._emoji.name : msgReact._emoji.id;
 
-/**
- * @param {MessageReaction} msgReact
+/**@param {MessageReaction} msgReact
  * @param {array} pool
- * @returns {string | false}
- */
+ * @returns {string | false} */
 export const getActualGroup = (msgReact, pool) => {
   const emoji = emojiFromMsgReact(msgReact);
   const groups = Object.keys(emojiInteractions[pool.name]);
@@ -638,8 +611,7 @@ export const freeEmojiInterWGroup = (group, ticket) => {
   emojiInteractions[ticket.pool.name][group].onDel?.(ticket);
 };
 
-/**
- * @param {MessageReaction} msgReact
+/**@param {MessageReaction} msgReact
  * @param {Pool} pool */
 export const isLocked = (msgReact, pool) => {
   const emoji = emojiFromMsgReact(msgReact);
@@ -647,8 +619,7 @@ export const isLocked = (msgReact, pool) => {
   return isLockedwGroup(msgReact, pool, actualGroup);
 };
 
-/**
- * @param {MessageReaction} msgReact
+/** @param {MessageReaction} msgReact
  * @param {Pool} pool
  * @param {string | false} group
  * @returns {boolean} */
@@ -671,10 +642,8 @@ export const clearTTimeout = ticket => {
   ticket.timedOut = false;
 };
 
-/**
- * @param {MessageReaction} msgReact
- * @param {DiscordUser} user
- */
+/**@param {MessageReaction} msgReact
+ * @param {DiscordUser} user */
 export const handleUserReactedTooFast = async (msgReact, user, ticket) => {
   // TODO : Sometimes the filter gets bypassed and people can react to stuff that is not in the normal channels
   // TODO : The bypass is a problem in app.js
@@ -690,11 +659,9 @@ export const handleUserReactedTooFast = async (msgReact, user, ticket) => {
   }
 };
 
-/**
- * @param {string} id - DiscordUser id
+/**@param {string} id - DiscordUser id
  * @param {Lock[]} locks - All locks associated with this dataFlow
- * @returns {DataFlowEntry} Returns a dataFlowEntry
- */
+ * @returns {DataFlowEntry} Returns a dataFlowEntry */
 export const dataFlowFactory = (id, locks = []) => {
   class DataFlow {
     constructor() {
@@ -747,16 +714,13 @@ export const dataFlowFactory = (id, locks = []) => {
 
 /**@param {object} obj Object to traverse
  * @param {string} path Path to the property
- * @return {*} Property
- */
+ * @return {*} Property */
 const deepGetObject = (obj, path) => path.split('.').reduce((acc, cur) => acc[cur], obj);
 
 /** @typedef AbortPtrPath - String that points to the location of the boolean abort flag
- *  @type {string}
- */
+ *  @type {string} */
 
-/**
- * @typedef InterruptRunnerConfig
+/**@typedef InterruptRunnerConfig
  * @type {object}
  * @prop {Array.<function(): promise>} actions - Array of async functions
  * @prop { {[AbortPtrPath]: boolean} | string } [abortPtr] - Boolean inside Pointer to abort execution of
@@ -767,8 +731,7 @@ const deepGetObject = (obj, path) => path.split('.').reduce((acc, cur) => acc[cu
  *                                    - If undefined will just use the internal abort of dataFlow
  * @prop {AbortPtrPath} [abortPath] - String that points to the location of the boolean abort flag
  * @prop {string} [dataFlowId] - Discord.User.id
- * @prop {boolean} [negatePtr] - If the pointer is to be negated
- */
+ * @prop {boolean} [negatePtr] - If the pointer is to be negated */
 
 const freshPointer = (abortPtr, abortPath, negatePtr) => {
   if (abortPtr && abortPath) return deepGetObject(abortPtr, abortPath) ^ negatePtr;
