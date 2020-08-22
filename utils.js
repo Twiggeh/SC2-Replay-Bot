@@ -67,45 +67,70 @@ export const isPartOfPool = id => {
  * @typedef EnemyRace
  * @type {false | "vsZerg" | "vsTerran" | "vsProtoss"} VsPlayerRank */
 
-/**@typedef TicketFactoryOptions
+/**@typedef T_FactoryOptions
  * @type {Object}
- * @prop {string}     id      - Message ID
- * @prop {string}     content - Message Content
- * @prop {Message}    origMsg - Discord Message
- * @prop {string}     url     - Url of the first detected replay
+ * @prop {string} id        - Message ID
+ * @prop {string} content   - Message Content
+ * @prop {string} url       - Url of the first detected replay
+ * @prop {Message["attachments"]} attachArr - Array with all the Attachments of the orig msg*/
+
+/**@typedef DVT_Opts
+ * @type {Object}
+ * @prop {Message} origMsg - Discord Message
  * @prop {PlayerRank} rank    - Players Rank
  * @prop {PlayerRace} race    - Players Race
- * @prop {EnemyRace}  vsRace  - VsPlayerRank */
+ * @prop {EnemyRace}  vsRace  - VsPlayerRank
+ * @typedef {T_FactoryOptions & DVT_Opts} DVT_FactoryOptions */
 
-/**@typedef Ticket
+/**@typedef QT_Opts
  * @type {Object}
+ * @prop {PlayerRank} rank    - Players Rank
+ * @prop {PlayerRace} race    - Players Race
+ * @prop {EnemyRace}  vsRace  - VsPlayerRank
+ * @typedef {T_FactoryOptions & QT_Opts} QT_FactoryOptions */
+
+/**@typedef {T_FactoryOptions & QT_FactoryOptions & DVT_FactoryOptions} AllTicket_FactoryOptions */
+
+/**@typedef {Object} Ticket
  * @prop {string}  id        - Message ID
  * @prop {string}  url       - Url of the first detected replay
  * @prop {Pool}    pool      - Instance of POOL
  * @prop {string}  content   - Message Content
- * @prop {Message} origMsg   - Discord Message
  * @prop {boolean} timedOut  - Whether the message has timed out
  * @prop {number}  timeOutId - The timeoutId
  * @prop {boolean} emergency - If this ticket has been neglected for too long.
- * @prop {boolean} hasBeenReactedTo - If the Ticket has received a User's reaction
- * @prop {Array}   reactionHistory  - The emoji reaction history
- * @prop {string}  activatedAt      - The time at which the ticket got created */
+ * @prop {string}  activatedAt      - The time at which the ticket got created
+ * @prop {Message["attachments"]} attachArr - Array with all the Attachments of the orig msg */
+
+/**@typedef {Object} IR_T
+ * @prop {Message} origMsg   - Discord Message
+ * @prop {sting[]} lockedEmojiInteractionGroups - All groups that have been locked from being interacted.
+ * @typedef {Ticket & IR_T} IR_Ticket*/
+
 /**@typedef {Object} DV
  * @prop {PlayerRank} rank   - Players Rank
  * @prop {PlayerRace} race   - Players Race
  * @prop {PlayerRace} vsRace - VsPlayerRank
- * @prop {sting[]} lockedEmojiInteractionGroups - All groups that have been locked from being interacted.
- * @typedef {Ticket & DV} DV_Ticket */
+ * @prop {Array}   reactionHistory  - The emoji reaction history
+ * @prop {boolean} hasBeenReactedTo - If the Ticket has received a User's reaction
+ * @typedef {IR_Ticket & DV} DV_Ticket */
+
+/**@typedef {Object} Q
+ * @prop {DiscordUser} coach - Coach that has taken on the role of coaching the user
+ * @typedef {Ticket & Q} Q_Ticket */
 
 /**@typedef AllTickets
- * @type {Ticket | DV_Ticket} */
+ * @type {Ticket | DV_Ticket | IR_Ticket | Q_Ticket} */
 
 /**@param {Pool} pool Instance of POOL
- * @param {TicketFactoryOptions} param1 */
-const ticketFactory = (pool, { id, content, url, origMsg, race, vsRace, rank }) => {
+ * @param {AllTicket_FactoryOptions} param1
+ * @return {AllTickets}*/
+const ticketFactory = (
+  pool,
+  { id, content, url, attachArr, origMsg, race, vsRace, rank, activatedAt, coach }
+) => {
   switch (pool.name) {
     case 'DATA_VALIDATION_POOL':
-      /** @type {DV_Ticket} */
       return {
         id,
         hasBeenReactedTo: false,
@@ -116,6 +141,7 @@ const ticketFactory = (pool, { id, content, url, origMsg, race, vsRace, rank }) 
         emergency: false,
         lockedEmojiInteractionGroups: [],
         race,
+        attachArr,
         vsRace,
         rank,
         content,
@@ -137,7 +163,25 @@ const ticketFactory = (pool, { id, content, url, origMsg, race, vsRace, rank }) 
         origMsg,
         url,
         pool,
+        attachArr,
       };
+    case 'QUEUE_POOL': {
+      return {
+        id,
+        activatedAt,
+        timedOut: false,
+        timeOutId: undefined,
+        emergency: false,
+        lockedEmojiInteractionGroups: [],
+        content,
+        attachArr,
+        pool,
+        race,
+        rank,
+        vsRace,
+        coach,
+      };
+    }
     default:
       console.error(new Error(`Wrong type (${pool.name}) provided.`));
   }
@@ -188,6 +232,7 @@ export const delAllMsgs = async ({ UserIDs, DMChannels }) => {
 };
 
 const timeOutHandler = async (ticket, system) => {
+  console.log('hello');
   ticket.timedOut = true;
   switch (system) {
     case 'IS_REPLAY_POOL': {
@@ -224,6 +269,20 @@ const timeOutHandler = async (ticket, system) => {
       await delAllMsgs({ UserIDs: ticket.origMsg.author.id });
       return;
     }
+    case 'QUEUE_POOL': {
+      const aborted = await newInterruptRunner({
+        abortPtr: ticket,
+        abortPath: 'timedOut',
+        negatePtr: true,
+        actions: [
+          () => {
+            //TODO: finish timeout actions
+          },
+        ],
+      });
+      // TODO : Finish aborted
+      return aborted;
+    }
     default:
       console.error(new Error(`Wrong system (${system}) provided.`));
   }
@@ -249,12 +308,15 @@ const getTicketTimeout = pool => {
     case 'DATA_VALIDATION_POOL':
       return 40 * 1000;
     case 'QUEUE_POOL':
-      return 60 * 60 * 1000;
+      return 10 * 1000; // TODO : Make longer
     default:
       console.error(`Wrong name provided (${pool.name})`);
   }
 };
 
+/**@param   {Pool} pool
+ * @param   {AllTicket_FactoryOptions} options
+ * @returns {AllTickets}*/
 export const buildTicket = (pool, options) => {
   const ticket = ticketFactory(pool, options);
   const timeout = getTicketTimeout(pool);
@@ -361,6 +423,7 @@ export const handleConfIsReplay = async (isReplay, msg, url) => {
     content: msg.content,
     url,
     origMsg: msg,
+    attachArr: msg.attachments,
   });
 };
 
@@ -459,6 +522,7 @@ You can omit this error message by specifying your rank with:
 export const handleMissingData = async (msg, playingAgainst, playingAs, rank, url) => {
   const [answer, actions] = await sendMissingData(msg, playingAgainst, playingAs, rank);
   buildTicket(DATA_VALIDATION_POOL, {
+    attachArr: msg.attachments,
     id: answer.id,
     content: msg.content,
     url,
@@ -470,6 +534,25 @@ export const handleMissingData = async (msg, playingAgainst, playingAs, rank, ur
   for (let action of actions) {
     await action(answer);
   }
+};
+
+// TODO : Replace with real Coach provider
+
+const coachIds = ['145856913014259712'];
+
+/**@param {DV_Ticket} ticket
+ * @return {Promise<void>} */
+export const handlePushToCoaches = ticket => {
+  buildTicket(QUEUE_POOL, {
+    id: ticket.id,
+    activatedAt: ticket.activatedAt,
+    content: ticket.content,
+    attachArr: ticket.attachArr,
+    pool: QUEUE_POOL,
+    race: ticket.race,
+    rank: ticket.rank,
+    vsRace: ticket.vsRace,
+  });
 };
 
 /**
@@ -777,8 +860,48 @@ export const newInterruptRunner = async ({
   return false;
 };
 
+import Coach from './Models/Coach.js';
+
+const getAvailCoaches = async () => {
+  const allCoaches = await Coach.find({});
+  const date = new Date();
+  const curDay = (() => {
+    switch (date.getDay()) {
+      case 0:
+        return 'sunday';
+      case 1:
+        return 'monday';
+      case 2:
+        return 'tuesday';
+      case 3:
+        return 'wednesday';
+      case 4:
+        return 'thursday';
+      case 5:
+        return 'friday';
+      case 6:
+        return 'saturday';
+    }
+  })();
+  const availableCoaches = [];
+  // TODO : Add available Time
+  // available time : [Start, End, Start1, End1 ]
+  console.log(allCoaches);
+};
+
+/**@param {Q_Ticket} ticket
+ * @param {DiscordUser[]} availCoaches
+ */
+export const sendToAllCoaches = (ticket, availCoaches) => {};
+
 import { client } from './app.js';
-import { User as DiscordUser, DMChannel, Message, MessageReaction } from 'discord.js';
+import {
+  User as DiscordUser,
+  DMChannel,
+  Message,
+  MessageReaction,
+  MessageAttachment,
+} from 'discord.js';
 import {
   isSC2ReplayReminder,
   isSC2Fail,
@@ -804,3 +927,4 @@ import {
   dRankCuts,
 } from './config/global.js';
 import { raceEmojis, rankEmojis, vsRaceEmojis } from './Emojis.js';
+import mongoose from 'mongoose';

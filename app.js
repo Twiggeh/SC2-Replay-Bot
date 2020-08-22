@@ -2,7 +2,7 @@ export const client = new Discord.Client();
 
 (async () => {
   const allCoachIds = await getCoaches();
-  const coaches = ['145856913014259712'];
+  //  const coaches = ['145856913014259712'];
 
   client.on('ready', () => console.log('Bot online'));
 
@@ -74,6 +74,7 @@ export const client = new Discord.Client();
           // Put into Coaches' Queue
           clearTTimeout(ticket);
           ticket.timedOut = false;
+          Object.freeze(ticket);
           DATA_FLOW[getRecipId(msgReact)].resolveAll().remove();
 
           console.log('all emojies were received.');
@@ -128,7 +129,7 @@ export const client = new Discord.Client();
 
   client.on('message', async msg => {
     if (!shouldHandleMsg(msg)) return;
-    await delAllMsgs({ UserIDs: coaches });
+    // await delAllMsgs({ UserIDs: coaches });
     const [hasReplay, url, urlArr] = getMsgAttachments(msg);
     const { playingAgainst, playingAs, rank, replay } = whichDataPresent(msg);
     if (!hasReplay) return;
@@ -138,7 +139,7 @@ export const client = new Discord.Client();
         actions: [
           () => handleConfIsReplay(replay, msg, url),
           () => handleMissingData(msg, playingAgainst, playingAs, rank, url),
-          () => handleConfirmation(msg),
+          () => Promise.allSettled([handleConfirmation(msg), handlePushToCoaches()]),
         ],
       });
     } catch (e) {
@@ -164,11 +165,7 @@ import {
   clearTTimeout,
   getRecipId,
   hasAllProperties,
-} from './utils.js';
-import { writeFileSync, readFileSync } from 'fs';
-import { confirmIsReplayMsg, isNotSC2Replay, isSC2Replay } from './messages.js';
-import { getCoaches } from './provider/provider.js';
-import {
+  handlePushToCoaches,
   handleMissingData,
   handleConfIsReplay,
   handleConfirmation,
@@ -181,6 +178,9 @@ import {
   dataFlowFactory,
   handleUserReactedTooFast,
   newInterruptRunner,
+  DATA_FLOW,
 } from './utils.js';
+import { writeFileSync, readFileSync } from 'fs';
+import { confirmIsReplayMsg, isNotSC2Replay, isSC2Replay } from './messages.js';
+import { getCoaches } from './provider/provider.js';
 import { allEmojis } from './Emojis.js';
-import { DATA_FLOW } from './utils.js';
