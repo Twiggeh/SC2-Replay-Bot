@@ -17,23 +17,28 @@
  * @prop {function() => DataFlowEntry} resolveInd - Resolve the action with the index of the action.
  * @prop {[function() => DataFlowEntry]} resolves - All resolvables of the locks.
  */
-/**
- * @type {Object.<string, DataFlowEntry>}
- */
+/** @type {Object<string, DataFlowEntry>} */
 export const DATA_FLOW = {};
 
+/** @returns {Promise<void>} */
 export const sleep = async time => new Promise(resolve => setTimeout(resolve, time));
 
+/** @param {Message} msg @returns {boolean} */
 export const shouldHandleMsg = msg => {
   if (msg.author.bot) return false;
   if (msg.attachments === undefined) return false;
   if (msg.channel.name !== 'replays-1' && msg.channel.name !== 'replays-2') return false;
   return true;
 };
-
+/** @typedef Pool
+ * @type {Object<string, Ticket>}
+ * @prop {string} name - Name of the Pool
+ */
 // TODO : Refactor into provider (Pools Provider)
+/**  @type {Object<string, Pool> } */
 const POOLS = {};
 
+/** @param {string} name - Unique name of the pool @returns {Pool}*/
 const createPool = (name, methods) => {
   class Pool {}
   if (methods)
@@ -57,13 +62,56 @@ export const isPartOfPool = id => {
   }
   return false;
 };
-//
-const ticketFactory = (
-  pool,
-  { id, content, url, origMsg, lock, res, rej, race, vsRace, rank }
-) => {
+/**
+ * @typedef PlayerRank
+ * @type {false | "bronze" | "silver"   | "gold"  | "platinum" | "diamond"} Players Rank
+ * @typedef PlayerRace
+ * @type {false | "zerg"   | "terran"   | "protoss"} Players Race
+ * @typedef PlayerRace
+ * @type {false | "vsZerg" | "vsTerran" | "vsProtoss"} VsPlayerRank
+ */
+/**
+ * @typedef TicketFactoryOptions
+ * @type  {Object}
+ * @prop {string}     id      - Message ID
+ * @prop {string}     content - Message Content
+ * @prop {Message}    origMsg - Discord Message
+ * @prop {string}     url     - Url of the first detected replay
+ * @prop {PlayerRank} rank    - Players Rank
+ * @prop {PlayerRace} race    - Players Race
+ * @prop {PlayerRace} vsRace  - VsPlayerRank
+ */
+/**
+ * @typedef Ticket
+ * @type  {Object}
+ * @prop {string}  id        - Message ID
+ * @prop {string}  url       - Url of the first detected replay
+ * @prop {Pool}   pool      - Instance of POOL
+ * @prop {string}  content   - Message Content
+ * @prop {Message} origMsg   - Discord Message
+ * @prop {boolean} timedOut  - Whether the message has timed out
+ * @prop {number}  timeOutId - The timeoutId
+ * @prop {boolean} emergency - If this ticket has been neglected for too long.
+ * @prop {boolean} hasBeenReactedTo - If the Ticket has received a User's reaction
+ * @prop {Array}   reactionHistory  - The emoji reaction history
+ * @prop {string}  activatedAt      - The time at which the ticket got created
+ */
+/**
+ * @typedef {Object} DV
+ * @prop {sting[]} lockedEmojiInteractionGroups - All groups that have been locked from being interacted.
+ * @prop {PlayerRank} rank   - Players Rank
+ * @prop {PlayerRace} race   - Players Race
+ * @prop {PlayerRace} vsRace - VsPlayerRank
+ * @typedef {Ticket & DV} DV_Ticket
+ */
+/**
+ * @param {Pool} pool Instance of POOL
+ * @param {TicketFactoryOptions} param1
+ */
+const ticketFactory = (pool, { id, content, url, origMsg, race, vsRace, rank }) => {
   switch (pool.name) {
     case 'DATA_VALIDATION_POOL':
+      /** @type {DV_Ticket} */
       return {
         id,
         hasBeenReactedTo: false,
@@ -80,9 +128,6 @@ const ticketFactory = (
         origMsg,
         url,
         pool,
-        lock,
-        res,
-        rej,
       };
     case 'IS_REPLAY_POOL':
       return {
@@ -98,9 +143,6 @@ const ticketFactory = (
         origMsg,
         url,
         pool,
-        lock,
-        res,
-        rej,
       };
     default:
       console.error(new Error(`Wrong type (${pool.name}) provided.`));
@@ -152,23 +194,6 @@ export const delAllMsgs = async ({ DMIds, DMChannels }) => {
     `Deleted ${deleteResult.length} message${deleteResult.length > 1 ? 's' : ''}`
   );
 };
-
-// /**
-//  *
-//  * @param {boolean} abortedPtr - Boolean inside of an object, so that its a pointer and the value is always up to data
-//  * @param {string=} id - ID of the user, references DATA_FLOW
-//  * @param {function[]} actions - Array of async functions
-//  */
-// export const interruptRunner = async (abortedPtr, id, actions) => {
-//   console.log(abortedPtr, id, actions);
-//   for (let action of actions) {
-//     if (abortedPtr) {
-//       return true;
-//     }
-//     await action();
-//   }
-//   return false;
-// };
 
 const timeOutHandler = async (ticket, system) => {
   ticket.timedOut = true;
@@ -338,7 +363,7 @@ const createLock = () => {
 /**
  *
  * @param {boolean} isReplay
- * @param {Discord.Message} msg
+ * @param {Message} msg
  * @param {string} url
  * @returns {Lock}
  */
@@ -499,7 +524,7 @@ const deepSetObj = (obj, propPath, value) => {
 const emojiInteractions = {};
 
 /**
- * @param {object} pool INSTANCE OF POOL
+ * @param {Pool} pool INSTANCE OF POOL
  * @param {GroupWithEmojisAndMethods} groups
  */
 export const registerEmojiInteraction = (pool, groups) => {
@@ -643,7 +668,8 @@ export const clearTTimeout = ticket => {
  * @param {DiscordUser} user
  */
 export const handleUserReactedTooFast = async (msgReact, user, ticket) => {
-  // TODO:
+  // TODO : Sometimes the filter gets bypassed and people can react to stuff that is not in the normal channels
+  // TODO : The bypass is a problem in app.js
   // clearTTimeout(ticket);
 
   await user.send(reactedTooFast);
