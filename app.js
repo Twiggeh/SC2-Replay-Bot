@@ -1,5 +1,10 @@
 export const client = new Discord.Client();
 
+mongoose.connect(mongoDbKey, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
+
 (async () => {
   const allCoaches = await getCoaches();
   //  const coaches = ['145856913014259712'];
@@ -128,7 +133,10 @@ export const client = new Discord.Client();
   });
 
   client.on('message', async msg => {
-    if (isCoachCmd(msg)) console.log('hi');
+    if (isCoachCmd(msg)) {
+      await handleConfigCoach(msg);
+      return;
+    }
     if (!shouldHandleMsg(msg)) return;
     // await delAllMsgs({ UserIDs: coaches });
     const [hasReplay, url, urlArr] = getMsgAttachments(msg);
@@ -151,7 +159,7 @@ export const client = new Discord.Client();
 
 client.login(botKey);
 
-import { botKey } from './config/keys.js';
+import { botKey, mongoDbKey } from './config/keys.js';
 import Discord from 'discord.js';
 import {
   sleep,
@@ -181,8 +189,10 @@ import {
   newInterruptRunner,
   DATA_FLOW,
   isCoachCmd,
+  handleConfigCoach,
 } from './utils.js';
 import { writeFileSync, readFileSync } from 'fs';
 import { confirmIsReplayMsg, isNotSC2Replay, isSC2Replay } from './messages.js';
 import { getCoaches } from './provider/provider.js';
 import { allEmojis } from './Emojis.js';
+import mongoose from 'mongoose';
