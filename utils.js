@@ -116,7 +116,12 @@ export const isPartOfPool = id => {
  * @typedef {IR_Ticket & DV} DV_Ticket */
 
 /**@typedef {Object} Q
- * @prop {DiscordUser} coach - Coach that has taken on the role of coaching the user
+ * @prop {PlayerRank} rank     - Players Rank
+ * @prop {PlayerRace} race     - Players Race
+ * @prop {PlayerRace} vsRace   - VsPlayerRank
+ * @prop {DiscordUser} coach   - Coach that has taken on the role of coaching the user
+ * @prop {DiscordUser} student - Student that has Requested the coaching
+ * @prop {number} emojiIdentifier - EmojiNumber that is going to allow the coach to pull the user.
  * @typedef {Ticket & Q} Q_Ticket */
 
 /**@typedef AllTickets
@@ -127,7 +132,20 @@ export const isPartOfPool = id => {
  * @return {AllTickets}*/
 const ticketFactory = (
   pool,
-  { id, content, url, attachArr, origMsg, race, vsRace, rank, activatedAt, coach }
+  {
+    id,
+    content,
+    url,
+    attachArr,
+    origMsg,
+    race,
+    vsRace,
+    rank,
+    activatedAt,
+    student,
+    coach,
+    emojiIdentifier,
+  }
 ) => {
   switch (pool.name) {
     case 'DATA_VALIDATION_POOL':
@@ -180,6 +198,8 @@ const ticketFactory = (
         rank,
         vsRace,
         coach,
+        student,
+        emojiIdentifier,
       };
     }
     default:
@@ -552,6 +572,8 @@ export const handlePushToCoaches = ticket => {
     race: ticket.race,
     rank: ticket.rank,
     vsRace: ticket.vsRace,
+    student: ticket.origMsg.author,
+    emojiIdentifier: Object.keys(QUEUE_POOL).length + 1,
   });
 };
 
@@ -860,11 +882,12 @@ export const newInterruptRunner = async ({
   return false;
 };
 
-import Coach from './Models/Coach.js';
+import Coach, { availSchema } from './Models/Coach.js';
 
 const date = new Date();
-const getStrUTCDay = () => {
-  switch (date.getUTCDay()) {
+const getStrUTCDay = num => {
+  const number = num === undefined ? date.getUTCDay() : num;
+  switch (number) {
     case 0:
       return 'sunday';
     case 1:
@@ -882,7 +905,27 @@ const getStrUTCDay = () => {
   }
 };
 
+// const getUTCDayFromStr = str => {
+//   switch (str) {
+//     case 'sunday':
+//       return 0;
+//     case 'monday':
+//       return 1;
+//     case 'tuesday':
+//       return 2;
+//     case 'wednesday':
+//       return 3;
+//     case 'thursday':
+//       return 4;
+//     case 'friday':
+//       return 5;
+//     case 'saturday':
+//       return 6;
+//   }
+// };
+
 const getAvailCoaches = async () => {
+  // TODO : Maybe only search for new Coaches every 30 mins
   const allCoaches = await Coach.find({});
   const curHours = date.getUTCHours();
   const curMinutes = date.getUTCMinutes();
@@ -901,10 +944,10 @@ const getAvailCoaches = async () => {
       return false;
     }
   });
-  // TODO : Add available Time
-  // available time : [Start, End, Start1, End1 ]
   console.log(allCoaches);
+  return availableCoaches;
 };
+
 const includesAnyArr = (arr1, arr2) => {
   let result = 0;
   for (let i = 0; i < arr1.length; i++) {
@@ -912,9 +955,10 @@ const includesAnyArr = (arr1, arr2) => {
   }
   return result;
 };
-/**
- * @param {Message} msg
- */
+
+const cCmdDiscr = '!';
+
+/**@param {Message} msg */
 export const isCoachCmd = msg => {
   if (msg.author.bot) return false;
   if (msg.channel.type !== 'dm') return false;
@@ -923,17 +967,151 @@ export const isCoachCmd = msg => {
   // TODO : remove webdev
   const isCoach =
     includesAnyArr(userRoles, allCoachIds) | includesAny('598891772499984394', userRoles);
-  const hasRunner = msg.content.charAt(0) === '!';
+  const hasRunner = msg.content.charAt(0) === cCmdDiscr;
 
   if (isCoach && hasRunner) return true;
 
   return false;
 };
 
-/**@param {Q_Ticket} ticket
- * @param {DiscordUser[]} availCoaches
+/**@param {Message} msg */
+export const handleConfigCoach = async msg => {
+  /**@param {Array} rawMsg */
+  const getDay = rawMsg => {
+    if (includesAnyArr(rawMsg, ['mon', 'monday'])) return getStrUTCDay(1);
+    if (includesAnyArr(rawMsg, ['tue', 'tuesday'])) return getStrUTCDay(2);
+    if (includesAnyArr(rawMsg, ['wed', 'wednesday'])) return getStrUTCDay(3);
+    if (includesAnyArr(rawMsg, ['thu', 'thursday'])) return getStrUTCDay(4);
+    if (includesAnyArr(rawMsg, ['fri', 'friday'])) return getStrUTCDay(5);
+    if (includesAnyArr(rawMsg, ['sat', 'saturday'])) return getStrUTCDay(6);
+    if (includesAnyArr(rawMsg, ['sun', 'sunday'])) return getStrUTCDay(0);
+  };
+  /**@param {Array} rawMsg */
+  const getTime = rawMsg => {
+    const index = rawMsg.indexOf('times:', 1);
+    /**@type {string}  */
+    const times = rawMsg[index + 1];
+    if (index === -1 && times !== undefined) {
+      // TODO : Throw bad time to coach.
+      return false;
+    }
+    const timeArr = times.substr(1, times.length - 2).split(',');
+    if (timeArr.length % 2 !== 0) {
+      // TODO : Throw bad timesArr
+      return false;
+    }
+    for (let i = 0; i < timeArr.length; i += 2) {
+      const startTime = timeArr[0].split(':');
+      const endTime = timeArr[1].split(':');
+      const actualStart = startTime[0] * 60 + startTime[1];
+      const actualEnd = endTime[0] * 60 + endTime[1];
+      if (isNaN(actualStart) || isNaN(actualEnd)) {
+        // TODO : Throw bad numbers
+        return false;
+      }
+      if (actualEnd < actualStart) {
+        // TODO : Invalid time configuration.
+        return false;
+      }
+    }
+    return timeArr;
+  };
+  /**@param {Array} rawMsg */
+  const getPing = rawMsg => {
+    const index = rawMsg.indexOf('ping:');
+    if (index === -1) return false;
+    if (rawMsg[index + 1] === 'true') return true;
+    return false;
+  };
+  const fillAvailable = () => {
+    const result = {};
+    for (let day in availSchema) {
+      const temp = {};
+      for (let prop in availSchema[day]) {
+        temp[prop] = availSchema[day][prop].default;
+      }
+      result[day] = temp;
+    }
+    return result;
+  };
+  let coach = await Coach.findOne({ id: msg.author.id });
+  if (!coach) coach = new Coach({ id: msg.author.id, available: fillAvailable() });
+
+  const rawCommand = msg.content.toLowerCase().split(' ');
+  switch (rawCommand[0]) {
+    case `${cCmdDiscr}setonedaytime`: {
+      const day = getDay(rawCommand);
+      const times = getTime(rawCommand);
+      const ping = getPing(rawCommand);
+      console.log(day, times);
+      coach.available[day].times = times;
+      coach.available[day].ping = ping;
+      await coach.save();
+      break;
+    }
+    case `${cCmdDiscr}setglobalping`: {
+      const ping = getPing(rawCommand);
+      for (let day in coach.available) {
+        coach.available[day].ping = ping;
+      }
+      await coach.save();
+      break;
+    }
+    case `${cCmdDiscr}setglobaltimes`: {
+      const times = getTime(rawCommand);
+      for (let day in coach.available) {
+        coach.available[day].times = times;
+      }
+      await coach.save();
+      break;
+    }
+    default: {
+      // TODO: throw bad command at coach
+      console.log('bad command');
+    }
+  }
+  // TODO : Send configuration dashboard and then delete it after 20s
+};
+
+/** @param {DiscordUser} discordCoach*/
+const createDashboard = async discordCoach => {
+  // TODO : hook up pages
+  const dashboard = await discordCoach.send(dashboardMessage(discordCoach));
+  return dashboard;
+};
+
+/** @param {DiscordUser} discordCoach*/
+const getDashboard = async discordCoach => {
+  const [{ value: coach }, { value: messages }] = await Promise.allSettled([
+    Coach.findOne({ id: discordCoach.id }),
+    discordCoach.dmChannel.messages.fetch(),
+  ]);
+
+  let dashboard = messages.get(coach.dashboardId);
+  if (dashboard === undefined) {
+    dashboard = await createDashboard(discordCoach);
+  }
+  return dashboard;
+};
+
+/** @param {DiscordUser[]} coaches
+ * @returns {Promise<void>}
  */
-export const sendToAllCoaches = (ticket, availCoaches) => {};
+const updateAllDashboards = async coaches => {
+  const cache = [];
+  for (let i = 0; i < coaches.length; i++) {
+    cache.push(getDashboard(coaches[i]));
+  }
+  await Promise.allSettled(cache);
+  // TODO : add error handlers on all "allSettled" Promise handlers
+};
+
+export const sendToAllCoaches = async () => {
+  /** @type {DiscordUser[]}*/
+  const availCoaches = await getAvailCoaches();
+  await updateAllDashboards(availCoaches);
+  console.log('done');
+};
 
 import { client } from './app.js';
 import {
@@ -952,6 +1130,7 @@ import {
   missingDataReminder,
   missingDataFail,
   reactedTooFast,
+  dashboardMessage,
 } from './messages.js';
 import {
   zShortcuts,
