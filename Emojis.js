@@ -59,8 +59,36 @@ export const vsRaceEmojis = {
   },
 };
 
+export const emojiIdentifiers = {
+  '0': {
+    id: ':zero:',
+    url: 'https://ptb.discordapp.com/assets/d10eead5823437c08b5287cf93bd5223.svg',
+  },
+  '1': {
+    id: ':one:',
+    url: 'https://ptb.discordapp.com/assets/68546f5fc3b2166f42cf90b7e23c5ae9.svg',
+  },
+  '2': {
+    id: ':two:',
+    url: 'https://ptb.discordapp.com/assets/eb29ce5fcf54bc3b23ff77039a4ecf3c.svg',
+  },
+  '3': {
+    id: ':three:',
+    url: 'https://ptb.discordapp.com/assets/67f896405747f26f63f09e0cb048d358.svg',
+  },
+  '4': {
+    id: ':four:',
+    url: 'https://ptb.discordapp.com/assets/09fe8a2882cac4cdb4712ab9622d3fe1.svg',
+  },
+  '5': {
+    id: ':five:',
+    url: 'https://ptb.discordapp.com/assets/5575865e2cb3d50ea051b09d7e1d2550.svg',
+  },
+};
+
 export const allEmojis = {
   ...raceEmojis,
   ...rankEmojis,
   ...vsRaceEmojis,
+  ...emojiIdentifiers,
 };
