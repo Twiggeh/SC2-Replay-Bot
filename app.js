@@ -7,6 +7,7 @@ mongoose.connect(mongoDbKey, {
 
 (async () => {
   const allCoaches = await getCoaches();
+  await init();
   //  const coaches = ['145856913014259712'];
 
   client.on('ready', () => console.log('Bot online'));
@@ -80,7 +81,18 @@ mongoose.connect(mongoDbKey, {
           clearTTimeout(ticket);
           ticket.timedOut = false;
           Object.freeze(ticket);
-          DATA_FLOW[getRecipId(msgReact)].resolveAll().remove();
+          buildTicket(QUEUE_POOL, {
+            id: ticket.id,
+            activatedAt: ticket.activatedAt,
+            content: ticket.content,
+            attachArr: ticket.attachArr,
+            race: ticket.race,
+            rank: ticket.rank,
+            vsRace: ticket.vsRace,
+            student: ticket.origMsg.author,
+            emojiIdentifier: Object.keys(QUEUE_POOL).length + 1,
+          });
+          DATA_FLOW[getRecipId(msgReact)].resolveInd(1);
 
           console.log('all emojies were received.');
         }
@@ -143,14 +155,16 @@ mongoose.connect(mongoDbKey, {
     const { playingAgainst, playingAs, rank, replay } = whichDataPresent(msg);
     if (!hasReplay) return;
     try {
-      newInterruptRunner({
+      const aborted = await newInterruptRunner({
         dataFlowId: msg.author.id,
         actions: [
           () => handleConfIsReplay(replay, msg, url),
           () => handleMissingData(msg, playingAgainst, playingAs, rank, url),
-          () => Promise.allSettled([handleConfirmation(msg), handlePushToCoaches()]),
         ],
       });
+      if (aborted) return;
+      await handlePushToCoaches();
+      await handleConfirmation(msg);
     } catch (e) {
       console.error(new Error(e));
     }
@@ -196,3 +210,4 @@ import { confirmIsReplayMsg, isNotSC2Replay, isSC2Replay } from './messages.js';
 import { getCoaches } from './provider/provider.js';
 import { allEmojis } from './Emojis.js';
 import mongoose from 'mongoose';
+import init from './init.js';

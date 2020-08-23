@@ -93,6 +93,7 @@ export const dashboardMessage = (discordCoach, page = 1) => {
    * @prop {string} beingCoached - The coach actively coaching the user. */
   /** @param {Number} page */
   const getStudentTable = () => {
+    if (Object.keys(QUEUE_POOL).length === 0) return '';
     // TODO : add max width container
     let result = '';
 

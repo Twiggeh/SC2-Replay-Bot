@@ -12,13 +12,16 @@ export const availSchema = {
   sunday: dayData,
 };
 const availableSchema = new mongoose.Schema(availSchema);
-const coachSchema = new mongoose.Schema({
-  id: String,
-  races: [],
-  available: availableSchema,
-  timeZone: { type: Number, default: 0, max: 12, min: -12 },
-  dashboardId: String,
-});
+const coachSchema = new mongoose.Schema(
+  {
+    id: String,
+    races: [],
+    available: availableSchema,
+    timeZone: { type: Number, default: 0, max: 12, min: -12 },
+    dashboardId: String,
+  },
+  { id: false }
+);
 const Coach = mongoose.model('Coach', coachSchema);
 export default Coach;
 import mongoose from 'mongoose';
