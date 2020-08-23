@@ -1,3 +1,4 @@
+/* eslint-disable indent */
 export const confirmIsReplayMsg = {
   content: `It seems you have submitted a SC2 Replay !
 
@@ -65,3 +66,138 @@ export const reactedTooFast = {
   **Your coach request has been terminated.**
 Please restart the process, and if possible, include all of the data tags that are required!`,
 };
+
+/**@param {DiscordUser} discordCoach
+ * @param {Number} page
+ */
+export const dashboardMessage = (discordCoach, page = 1) => {
+  const greeting = `Hello, ${discordCoach.username}!`;
+  const getUnderline = (str, char = '=') => char.repeat(str.length);
+  const getCoachAbleStudents = () => {
+    const qLength = Object.keys(QUEUE_POOL).length;
+    return `Currently there ${
+      qLength === 0
+        ? 'are no students'
+        : qLength === 1
+        ? 'is one student'
+        : `are ${qLength} students`
+    } to coach.`;
+  };
+  /**@typedef RenderData
+   * @prop {string} ID - The emojiIdentifier that the coach will react with to get to coach the user
+   * @prop {string} name - Name of the Student
+   * @prop {string} race - Race of the Student
+   * @prop {string} vsRace - Race of the Opponent
+   * @prop {string} rank - Rank of the Student
+   * @prop {string} waitingFor - How long the user has been waiting for to be coached
+   * @prop {string} beingCoached - The coach actively coaching the user. */
+  /** @param {Number} page */
+  const getStudentTable = () => {
+    // TODO : add max width container
+    let result = '';
+
+    /**@type {Object<string, number>} */
+    const longestDataStr = {
+      ID: undefined,
+      name: undefined,
+      race: undefined,
+      rank: undefined,
+      vsRace: undefined,
+      waitingFor: undefined,
+      beingCoached: undefined,
+    };
+    for (let key in longestDataStr) {
+      longestDataStr[key] = key.length;
+    }
+
+    /** @type {[RenderData]} */
+    const temp = [];
+
+    for (let Q_ID in QUEUE_POOL) {
+      /** @type {import('./utils').Q_Ticket} */
+      const ticket = QUEUE_POOL[Q_ID];
+      const name = ticket.student.username;
+      const race = raceEmojis[ticket.race].id;
+      const vsRace = vsRaceEmojis[ticket.race].id;
+      const rank = rankEmojis[ticket.race].id;
+      const beingCoached =
+        ticket?.coach?.username === undefined ? ' - ' : ticket?.coach?.username;
+      const minsElapsed = Math.floor((Date.now() - ticket.activatedAt) / 1000) / 60;
+      const waitingFor = `${
+        minsElapsed / 60 > 1
+          ? `${(Math.floor(minsElapsed / 60) + '').padStart(2, '0')} hour${(
+              (minsElapsed % 60) +
+              ''
+            ).padStart(2, '0')} min${minsElapsed % 60 === 1 ? '' : 's'}`
+          : `${minsElapsed} mins`
+      }`;
+      const ID = emojiIdentifiers[ticket.emojiIdentifier];
+      temp[ID] = { ID, name, race, vsRace, rank, waitingFor, beingCoached };
+      let i = 5 * (page - 1);
+      for (let key in longestDataStr) {
+        if (i === 5 * page) break;
+        longestDataStr[key] = Math.max(longestDataStr[key], temp[ID][key].length);
+      }
+    }
+
+    /**@typedef {[{content: string, maxLength: number}]} FormatData
+     * @param {FormatData} data*/
+    const formatData = data => {
+      let res = '|';
+      data.forEach(({ content, maxLength }) => {
+        const longestEl = maxLength + 2;
+        const padStart = Math.max(1, Math.floor((longestEl - content.length - 1) / 2));
+        const padEnd = longestEl - content.length - padStart;
+        res += `${' '.repeat(padStart)}${content}${' '.repeat(padEnd)}|`;
+      });
+      return res;
+    };
+
+    /** @type {FormatData} */
+    const data = [];
+    for (let key in longestDataStr) {
+      data.push({ content: key, maxLength: longestDataStr[key] });
+    }
+
+    const getTableLegend = () => {
+      let result = '';
+      const firstRow = formatData(data);
+      result += firstRow + '\n';
+      result += getUnderline(firstRow, '-') + '\n';
+      return result;
+    };
+    result += getTableLegend();
+    for (let i = 0; i < temp.length; i++) {
+      const data = [];
+      const row = temp[i];
+      for (let key in row) {
+        data.push({ content: row[key], maxLength: longestDataStr[key] });
+      }
+      result += formatData(data);
+    }
+    const paginationStr = `Page ${page} / ${Math.ceil(temp.length / 5)}`;
+    result += formatData([
+      {
+        content: `Page ${page} / ${Math.ceil(temp.length / 5)}`,
+        maxLength: Math.max(
+          paginationStr.length,
+          data.reduce((acc, cur) => acc.maxLength + cur.maxLength)
+        ),
+      },
+    ]);
+    return result;
+  };
+  return {
+    content: `**DASHBOARD**
+${greeting}
+${getUnderline(greeting)}
+${getCoachAbleStudents()}
+
+${getStudentTable()}
+`,
+  };
+};
+
+import { User as DiscordUser } from 'discord.js';
+import { raceEmojis, vsRaceEmojis, rankEmojis, emojiIdentifiers } from './Emojis.js';
+import { QUEUE_POOL } from './utils.js';
