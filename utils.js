@@ -862,31 +862,72 @@ export const newInterruptRunner = async ({
 
 import Coach from './Models/Coach.js';
 
+const date = new Date();
+const getStrUTCDay = () => {
+  switch (date.getUTCDay()) {
+    case 0:
+      return 'sunday';
+    case 1:
+      return 'monday';
+    case 2:
+      return 'tuesday';
+    case 3:
+      return 'wednesday';
+    case 4:
+      return 'thursday';
+    case 5:
+      return 'friday';
+    case 6:
+      return 'saturday';
+  }
+};
+
 const getAvailCoaches = async () => {
   const allCoaches = await Coach.find({});
-  const date = new Date();
-  const curDay = (() => {
-    switch (date.getDay()) {
-      case 0:
-        return 'sunday';
-      case 1:
-        return 'monday';
-      case 2:
-        return 'tuesday';
-      case 3:
-        return 'wednesday';
-      case 4:
-        return 'thursday';
-      case 5:
-        return 'friday';
-      case 6:
-        return 'saturday';
+  const curHours = date.getUTCHours();
+  const curMinutes = date.getUTCMinutes();
+  const curDay = getStrUTCDay();
+
+  const availableCoaches = allCoaches.filter(coach => {
+    const { times } = coach.available[curDay];
+    for (let i = 0; i < times.length; i += 2) {
+      const [startH, startMin = 0] = times[i].split(':');
+      const [endH, endMin = 0] = times[i + 1].split(':');
+      const rawUTCStartTime = (startH - coach.timeZone) * 60 + startMin;
+      const rawUTCEndTime = (endH - coach.timeZone) * 60 + endMin;
+      const msStartTime = Date.now() + rawUTCStartTime;
+      const msEndTime = Date.now() + rawUTCEndTime;
+      if (msStartTime < Date.now() && msEndTime > Date.now()) return true;
+      return false;
     }
-  })();
-  const availableCoaches = [];
+  });
   // TODO : Add available Time
   // available time : [Start, End, Start1, End1 ]
   console.log(allCoaches);
+};
+const includesAnyArr = (arr1, arr2) => {
+  let result = 0;
+  for (let i = 0; i < arr1.length; i++) {
+    result |= arr1.includes(arr2[i]);
+  }
+  return result;
+};
+/**
+ * @param {Message} msg
+ */
+export const isCoachCmd = msg => {
+  if (msg.author.bot) return false;
+  if (msg.channel.type !== 'dm') return false;
+  const userRoles = msg.client.guilds.cache.array()[0].members.cache.get(msg.author.id)
+    ._roles;
+  // TODO : remove webdev
+  const isCoach =
+    includesAnyArr(userRoles, allCoachIds) | includesAny('598891772499984394', userRoles);
+  const hasRunner = msg.content.charAt(0) === '!';
+
+  if (isCoach && hasRunner) return true;
+
+  return false;
 };
 
 /**@param {Q_Ticket} ticket
@@ -928,3 +969,4 @@ import {
 } from './config/global.js';
 import { raceEmojis, rankEmojis, vsRaceEmojis } from './Emojis.js';
 import mongoose from 'mongoose';
+import { allCoachIds } from './provider/provider.js';

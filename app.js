@@ -1,7 +1,7 @@
 export const client = new Discord.Client();
 
 (async () => {
-  const allCoachIds = await getCoaches();
+  const allCoaches = await getCoaches();
   //  const coaches = ['145856913014259712'];
 
   client.on('ready', () => console.log('Bot online'));
@@ -128,6 +128,7 @@ export const client = new Discord.Client();
   });
 
   client.on('message', async msg => {
+    if (isCoachCmd(msg)) console.log('hi');
     if (!shouldHandleMsg(msg)) return;
     // await delAllMsgs({ UserIDs: coaches });
     const [hasReplay, url, urlArr] = getMsgAttachments(msg);
@@ -179,6 +180,7 @@ import {
   handleUserReactedTooFast,
   newInterruptRunner,
   DATA_FLOW,
+  isCoachCmd,
 } from './utils.js';
 import { writeFileSync, readFileSync } from 'fs';
 import { confirmIsReplayMsg, isNotSC2Replay, isSC2Replay } from './messages.js';

@@ -6,19 +6,24 @@ export const ingestDataFromFile = async fileName =>
     })
   );
 
+const zergQuery = ['ZergCoach', '556487007535366174'];
+const tossQuery = ['TossCoach', '556487013818302464'];
+const terQuery = ['TerCoach', '556487011066707968'];
+const coachQuery = ['Coach', '546799895840030736', 'AspiringCoach', '552128337766514690'];
+export const allCoachIds = [
+  '556487007535366174',
+  '556487013818302464',
+  '556487011066707968',
+  '546799895840030736',
+  '552128337766514690',
+];
+
 export const getCoaches = async (
   { zer = false, tos = false, ter = false, allCoach = false } = { allCoach: true }
 ) => {
-  const zergQuery = ['ZergCoach', '556487007535366174'];
-  const tossQuery = ['TossCoach', '556487013818302464'];
-  const terQuery = ['TerCoach', '556487011066707968'];
-
   const finalQuery = [];
   (() => {
-    if (allCoach)
-      return finalQuery.push(
-        ...['Coach', '546799895840030736', 'AspiringCoach', '552128337766514690']
-      );
+    if (allCoach) return finalQuery.push(...coachQuery);
     if (zer) finalQuery.push(...terQuery);
     if (tos) finalQuery.push(...tossQuery);
     if (ter) finalQuery.push(...zergQuery);
