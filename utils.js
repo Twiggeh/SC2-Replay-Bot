@@ -1196,7 +1196,7 @@ export const updateAllCoaches = async () => {
   const cache = [];
 
   allCoaches.forEach(id => cache.push(client.users.fetch(id)));
-  const discordCoaches = Promise.allSettled(cache).map(el => el.value);
+  const discordCoaches = (await Promise.allSettled(cache)).map(el => el.value);
 
   await updateDashboards(discordCoaches);
   console.log('done');
