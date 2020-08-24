@@ -951,12 +951,7 @@ let allCoaches;
  * the Dashboard if it cannot find one.
  */
 const getAvailDashboards = async () => {
-  // TODO : this needs to return DiscordUser[], right now it returns mongoose.model
   // TODO : put into a provider
-  // TODO : Maybe only search for new Coaches every 30 mins
-
-  const curHours = date.getUTCHours();
-  const curMinutes = date.getUTCMinutes();
 
   if (lastSearched === undefined || Date.now() - 30 * 60 * 1000 > lastSearched) {
     lastSearched = Date.now();
@@ -992,7 +987,6 @@ const getAvailDashboards = async () => {
       return false;
     }
   });
-  console.log(availableCoaches);
   return await getDashboards(availableCoaches.map(coach => coach.id));
 };
 
@@ -1108,21 +1102,22 @@ export const handleConfigCoach = async msg => {
       const day = getDay(rawCommand);
       const times = getTime(rawCommand);
       const ping = getPing(rawCommand);
-      console.log(day, times);
       dbCoach.available[day].times = times;
       dbCoach.available[day].ping = ping;
       break;
     }
     case `${cCmdDiscr}setglobalping`: {
       const ping = getPing(rawCommand);
-      for (let day in dbCoach.available) {
+      for (let day of Object.keys(dbCoach.available.inspect())) {
+        if (day === '_id') continue;
         dbCoach.available[day].ping = ping;
       }
       break;
     }
     case `${cCmdDiscr}setglobaltimes`: {
       const times = getTime(rawCommand);
-      for (let day in dbCoach.available) {
+      for (let day of Object.keys(dbCoach.available.inspect())) {
+        if (day === '_id') continue;
         dbCoach.available[day].times = times;
       }
       break;
@@ -1136,7 +1131,8 @@ export const handleConfigCoach = async msg => {
   // TODO : Send configuration dashboard and then delete it after 20s
 };
 
-/** @param {DiscordUser} discordCoach*/
+/** Does not auto create a DM, just sends a dashboard and returns the dashboard message
+ *  @param {DiscordUser} discordCoach*/
 const createDashboard = async discordCoach => {
   // TODO : hook up pages
   const dashboard = await discordCoach.send(dashboardMessage(discordCoach));
@@ -1150,8 +1146,6 @@ const createDashboard = async discordCoach => {
  * @returns {Promise<Message>}
  */
 const getDashboard = async discordCoach => {
-  //TODO : cannot read messages of undefined
-  // TODO : Somehow ingests the dashboard message
   const cache = await Promise.allSettled([
     getDBCoach(discordCoach.id),
     discordCoach.dmChannel.messages.fetch(),
@@ -1175,7 +1169,7 @@ const getDashboard = async discordCoach => {
  * @param {DiscordUser[]} discordCoaches
  * @returns {Promise<void>}
  */
-const updateAllDashboards = async discordCoaches => {
+const updateDashboards = async discordCoaches => {
   const cache = [];
   for (let i = 0; i < discordCoaches.length; i++) {
     cache.push(getDashboard(discordCoaches[i]));
@@ -1190,10 +1184,21 @@ const updateAllDashboards = async discordCoaches => {
   // TODO : add error handlers on all "allSettled" Promise handlers
 };
 
+// const updateAvailCoaches = async () => {
+//   const availDashes = await getAvailDashboards();
+//   await updateDashboards(availDashes.map(el => el.channel.recipient));
+//   console.log('done');
+// };
+
 export const updateAllCoaches = async () => {
-  const availDashes = await getAvailDashboards();
-  // TODO : Cannot read messages of undefined
-  await updateAllDashboards(availDashes.map(el => el.channel.recipient)); // TODO : these are mongoose models
+  // TODO PUT INTO A PROVIDER
+  const allCoaches = ['145856913014259712'];
+  const cache = [];
+
+  allCoaches.forEach(id => cache.push(client.users.fetch(id)));
+  const discordCoaches = Promise.allSettled(cache).map(el => el.value);
+
+  await updateDashboards(discordCoaches);
   console.log('done');
 };
 
