@@ -22,8 +22,10 @@ mongoose.connect(mongoDbKey, {
 
     const msgInPool = isPartOfPool(msgReact.message.id);
     if (!msgInPool) {
-      await handleUserReactedTooFast(msgReact, user);
-      return console.error('User reacted on a message that is not in the message Pool');
+      return;
+      // TODO : REMOVE THESE
+      // await handleUserReactedTooFast(msgReact, user);
+      // return console.error('User reacted on a message that is not in the message Pool');
     }
 
     switch (msgInPool) {
@@ -127,10 +129,12 @@ mongoose.connect(mongoDbKey, {
     // TODO : Filter messages.
     const msgInPool = isPartOfPool(msgReact.message.id);
     if (!msgInPool) {
-      handleUserReactedTooFast(user);
-      return console.error(
-        'User removed a reaction on a message that is not in the message Pool'
-      );
+      return;
+      // TODO : remove these
+      //handleUserReactedTooFast(user);
+      // return console.error(
+      //   'User removed a reaction on a message that is not in the message Pool'
+      // );
     }
     switch (msgInPool) {
       case 'DATA_VALIDATION_POOL': {

@@ -238,10 +238,13 @@ export const delAllMsgs = async ({ UserIDs, DMChannels }) => {
   const deleteBuffer = [];
   fetchedMsgs.forEach(msgMap =>
     Array.from(msgMap).forEach(snowFlakeWithMsg => {
+      /** @type {Message} */
       const msg = snowFlakeWithMsg[1];
       const id = snowFlakeWithMsg[0];
       delFromAllPools(id);
-      msg.author.bot && deleteBuffer.push(msg.delete());
+      msg.author.bot &&
+        !msg.content.startsWith('.\n**DASHBOARD**') &&
+        deleteBuffer.push(msg.delete());
     })
   );
   const deleteResult = await Promise.allSettled(deleteBuffer);
@@ -893,14 +896,18 @@ const getStrUTCDay = num => {
   }
 };
 
-/**@param {string[]} coachDbIds
- * @returns
+/**
+ * Gets all DiscordUsers from the provided IDs, creates
+ * a DMChannel to those Users and retrieves their Dashboards.
+ * If no Dashboard is found it is created.
+ * @param {string[]} coachIDs - Discord User ID / Database ID (They are the same)
+ * @returns {Promise<[Message]>}
  */
-const convDbIdsToDiscordUser = async coachDbIds => {
+const getDashboards = async coachIDs => {
   const cache = [];
-  for (let i = 0; i < coachDbIds.length; i++) {
+  for (let i = 0; i < coachIDs.length; i++) {
     cache.push(async () => {
-      const user = await client.users.fetch(coachDbIds[i]);
+      const user = await client.users.fetch(coachIDs[i]);
       await user.createDM();
       return await getDashboard(user);
     });
@@ -917,7 +924,12 @@ let lastSearched;
 /**@type {mongoose.Document[] | mongoose.Document | {}} */
 let allCoaches;
 
-const getAvailDbCoaches = async () => {
+/**
+ * Retrieves all DataBaseCoaches that are available based on their
+ * timezone configuration, and retrieves their Dashboards. Creates
+ * the Dashboard if it cannot find one.
+ */
+const getAvailDashboards = async () => {
   // TODO : this needs to return DiscordUser[], right now it returns mongoose.model
   // TODO : put into a provider
   // TODO : Maybe only search for new Coaches every 30 mins
@@ -960,7 +972,7 @@ const getAvailDbCoaches = async () => {
     }
   });
   console.log(availableCoaches);
-  return await convDbIdsToDiscordUser(availableCoaches.map(coach => coach.id));
+  return await getDashboards(availableCoaches.map(coach => coach.id));
 };
 
 const includesAnyArr = (arr1, arr2) => {
@@ -989,7 +1001,12 @@ export const isCoachCmd = msg => {
   return false;
 };
 
-const getDbCoachOrCreateOne = async id => {
+/**
+ * Retrieves a coach, if it cannot find one it will create one.
+ * @param {string} id Discord User Id / Coach Id (Both are the same)
+ * @return {Promise<mongoose.Document>}
+ */
+const getDBCoach = async id => {
   const fillAvailable = () => {
     const result = {};
     for (let day in availSchema) {
@@ -1062,7 +1079,7 @@ export const handleConfigCoach = async msg => {
     return false;
   };
 
-  const dbCoach = await getDbCoachOrCreateOne(msg.author.id);
+  const dbCoach = await getDBCoach(msg.author.id);
 
   const rawCommand = msg.content.toLowerCase().split(' ');
   switch (rawCommand[0]) {
@@ -1105,14 +1122,17 @@ const createDashboard = async discordCoach => {
   return dashboard;
 };
 
-/** @param {DiscordUser} discordCoach
+/**
+ * Retrieves Dashboards for the provided IDs, if it cannot find a Dashboard
+ * for a specified ID, it will create a Dashboard and return it.
+ * @param {DiscordUser} discordCoach
  * @returns {Promise<Message>}
  */
 const getDashboard = async discordCoach => {
   //TODO : cannot read messages of undefined
   // TODO : Somehow ingests the dashboard message
   const cache = await Promise.allSettled([
-    getDbCoachOrCreateOne(discordCoach.id),
+    getDBCoach(discordCoach.id),
     discordCoach.dmChannel.messages.fetch(),
   ]);
   const [{ value: coach }, { value: messages }] = cache;
@@ -1128,13 +1148,16 @@ const getDashboard = async discordCoach => {
   return dashboard;
 };
 
-/** @param {DiscordUser[]} coaches
+/**
+ * Takes an Array of discordCoaches and automatically updates
+ * their Dashboards with the data from QUEUE_POOL
+ * @param {DiscordUser[]} discordCoaches
  * @returns {Promise<void>}
  */
-const updateAllDashboards = async coaches => {
+const updateAllDashboards = async discordCoaches => {
   const cache = [];
-  for (let i = 0; i < coaches.length; i++) {
-    cache.push(getDashboard(coaches[i]));
+  for (let i = 0; i < discordCoaches.length; i++) {
+    cache.push(getDashboard(discordCoaches[i]));
   }
   /**@type {Message[]}*/
   const dashboards = (await Promise.allSettled(cache)).map(el => el.value);
@@ -1147,16 +1170,17 @@ const updateAllDashboards = async coaches => {
 };
 
 export const updateAllCoaches = async () => {
-  /** @type {DiscordUser[]}*/
-  const availdbCoaches = await getAvailDbCoaches();
+  const availDashes = await getAvailDashboards();
   // TODO : Cannot read messages of undefined
-  await updateAllDashboards(availdbCoaches); // TODO : these are mongoose models
+  await updateAllDashboards(availDashes.map(el => el.channel.recipient)); // TODO : these are mongoose models
   console.log('done');
 };
 
-/** @param {string[]} coachIds*/
+/** @param {string[]} coachIds
+ * @returns {Message[]}
+ */
 export const createCoaches = async coachIds => {
-  return await convDbIdsToDiscordUser(coachIds);
+  return await getDashboards(coachIds);
 };
 
 import { client } from './app.js';

@@ -113,14 +113,14 @@ export const dashboardMessage = (discordCoach, page = 1) => {
 
     /** @type {[RenderData]} */
     const temp = [];
-
-    for (let Q_ID in QUEUE_POOL) {
+    const QUEUE_KEYS = Object.keys(QUEUE_POOL);
+    for (let Q_ID of QUEUE_KEYS) {
       /** @type {import('./utils').Q_Ticket} */
       const ticket = QUEUE_POOL[Q_ID];
       const name = ticket.student.username;
       const race = raceEmojis[ticket.race].id;
-      const vsRace = vsRaceEmojis[ticket.race].id;
-      const rank = rankEmojis[ticket.race].id;
+      const vsRace = vsRaceEmojis[ticket.vsRace].id;
+      const rank = rankEmojis[ticket.rank].id;
       const beingCoached =
         ticket?.coach?.username === undefined ? ' - ' : ticket?.coach?.username;
       const minsElapsed = Math.floor((Date.now() - ticket.activatedAt) / 1000) / 60;
@@ -132,18 +132,30 @@ export const dashboardMessage = (discordCoach, page = 1) => {
             ).padStart(2, '0')} min${minsElapsed % 60 === 1 ? '' : 's'}`
           : `${minsElapsed} mins`
       }`;
-      const ID = emojiIdentifiers[ticket.emojiIdentifier];
-      temp[ID] = { ID, name, race, vsRace, rank, waitingFor, beingCoached };
+      const ID = emojiIdentifiers[ticket.emojiIdentifier].id;
+      temp[ticket.emojiIdentifier] = {
+        ID,
+        name,
+        race,
+        rank,
+        vsRace,
+        waitingFor,
+        beingCoached,
+      };
       let i = 5 * (page - 1);
       for (let key in longestDataStr) {
         if (i === 5 * page) break;
-        longestDataStr[key] = Math.max(longestDataStr[key], temp[ID][key].length);
+        longestDataStr[key] = Math.max(
+          longestDataStr[key],
+          temp[ticket.emojiIdentifier][key].length
+        );
       }
     }
 
     /**@typedef {[{content: string, maxLength: number}]} FormatData
      * @param {FormatData} data*/
     const formatData = data => {
+      if (data.length === 0) return '';
       let res = '|';
       data.forEach(({ content, maxLength }) => {
         const longestEl = maxLength + 2;
@@ -154,44 +166,44 @@ export const dashboardMessage = (discordCoach, page = 1) => {
       return res;
     };
 
-    /** @type {FormatData} */
-    const data = [];
-    for (let key in longestDataStr) {
-      data.push({ content: key, maxLength: longestDataStr[key] });
-    }
+    /**@type {string} */
+    let firstRow = '';
 
     const getTableLegend = () => {
       let result = '';
-      const firstRow = formatData(data);
+      /** @type {FormatData} */
+      const data = [];
+      for (let key in longestDataStr) {
+        data.push({ content: key, maxLength: longestDataStr[key] });
+      }
+      firstRow = formatData(data);
       result += firstRow + '\n';
       result += getUnderline(firstRow, '-') + '\n';
       return result;
     };
     result += getTableLegend();
-    for (let i = 0; i < temp.length; i++) {
+    for (let i = 1; i < temp.length; i++) {
       const data = [];
       const row = temp[i];
       for (let key in row) {
         data.push({ content: row[key], maxLength: longestDataStr[key] });
       }
-      result += formatData(data);
+      result += formatData(data) + '\n';
     }
     const paginationStr = `Page ${page} / ${Math.ceil(temp.length / 5)}`;
     result += formatData([
       {
         content: `Page ${page} / ${Math.ceil(temp.length / 5)}`,
-        maxLength: Math.max(
-          paginationStr.length,
-          data.reduce((acc, cur) => acc.maxLength + cur.maxLength)
-        ),
+        maxLength: Math.max(paginationStr.length, firstRow.length - 4),
       },
     ]);
-    return result;
+    return `\`\`\`${result}\`\`\``;
   };
   return {
-    content: `**DASHBOARD**
+    content: `.
+**DASHBOARD**
 ${greeting}
-${getUnderline(greeting)}
+${getUnderline(greeting, '~')}
 ${getCoachAbleStudents()}
 
 ${getStudentTable()}
