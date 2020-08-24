@@ -118,19 +118,20 @@ export const dashboardMessage = (discordCoach, page = 1) => {
       /** @type {import('./utils').Q_Ticket} */
       const ticket = QUEUE_POOL[Q_ID];
       const name = ticket.student.username;
-      const race = raceEmojis[ticket.race].id;
+      const race = ticket.race;
+      const rank = ticket.rank;
       const vsRace = vsRaceEmojis[ticket.vsRace].id;
-      const rank = rankEmojis[ticket.rank].id;
       const beingCoached =
         ticket?.coach?.username === undefined ? ' - ' : ticket?.coach?.username;
       const minsElapsed = Math.floor((Date.now() - ticket.activatedAt) / 1000) / 60;
       const waitingFor = `${
         minsElapsed / 60 > 1
-          ? `${(Math.floor(minsElapsed / 60) + '').padStart(2, '0')} hour${(
-              (minsElapsed % 60) +
-              ''
-            ).padStart(2, '0')} min${minsElapsed % 60 === 1 ? '' : 's'}`
-          : `${minsElapsed} mins`
+          ? `${(Math.floor(minsElapsed / 60) + '').padStart(2, '0')} hour${
+              minsElapsed / 60 > 1 ? 's' : ''
+            }  ${minsElapsed.toFixed(2).padStart(4, '0')} min${
+              minsElapsed % 60 === 1 ? '' : 's'
+            }`
+          : `${minsElapsed.toFixed(2).padStart(4, '0')} mins`
       }`;
       const ID = emojiIdentifiers[ticket.emojiIdentifier].id;
       temp[ticket.emojiIdentifier] = {
@@ -182,6 +183,7 @@ export const dashboardMessage = (discordCoach, page = 1) => {
       return result;
     };
     result += getTableLegend();
+
     for (let i = 1; i < temp.length; i++) {
       const data = [];
       const row = temp[i];
@@ -190,23 +192,29 @@ export const dashboardMessage = (discordCoach, page = 1) => {
       }
       result += formatData(data) + '\n';
     }
-    const paginationStr = `Page ${page} / ${Math.ceil(temp.length / 5)}`;
+    const paginationStr = `Page ${page} / ${Math.max(
+      1,
+      Math.ceil((temp.length - 1) / 5)
+    )}`; // TODO : change to normal indexies
     result += formatData([
       {
-        content: `Page ${page} / ${Math.ceil(temp.length / 5)}`,
+        content: paginationStr,
         maxLength: Math.max(paginationStr.length, firstRow.length - 4),
       },
     ]);
-    return `\`\`\`${result}\`\`\``;
+    const block = '```';
+    return `${block}${result}${block}`;
   };
   return {
     content: `.
 **DASHBOARD**
+
 ${greeting}
-${getUnderline(greeting, '~')}
-${getCoachAbleStudents()}
+${getUnderline(greeting, '^')}
 
 ${getStudentTable()}
+
+${getCoachAbleStudents()}
 `,
   };
 };

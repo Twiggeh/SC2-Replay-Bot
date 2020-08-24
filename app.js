@@ -79,7 +79,6 @@ mongoose.connect(mongoDbKey, {
           ['race', 'rank', 'vsRace']
         );
         if (hasAllEmojies) {
-          // Put into Coaches' Queue
           clearTTimeout(ticket);
           ticket.timedOut = false;
           Object.freeze(ticket);

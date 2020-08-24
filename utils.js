@@ -208,6 +208,7 @@ const ticketFactory = (
 
 const delFromAllPools = id => {
   for (let poolName in POOLS) {
+    if (poolName === 'QUEUE_POOL') return;
     delete POOLS[poolName][id];
   }
 };
@@ -370,11 +371,11 @@ export const whichDataPresent = msg => {
       ? 'terran'
       : false,
     playingAgainst: includesAny(lowerMsg, zVsShortcuts)
-      ? 'zerg'
+      ? 'vsZerg'
       : includesAny(lowerMsg, pVsShortcuts)
-      ? 'protoss'
+      ? 'vsProtoss'
       : includesAny(lowerMsg, tVsShortcuts)
-      ? 'terran'
+      ? 'vsTerran'
       : false,
     replay: includesAny(lowerMsg, replayCuts),
     rank: includesAny(lowerMsg, bRankCuts)
@@ -438,8 +439,12 @@ const createLock = () => {
  * @param {string} url
  * @returns {Lock} */
 export const handleConfIsReplay = async (isReplay, msg, url) => {
+  if (isReplay) {
+    DATA_FLOW[msg.author.id].resolveInd(0);
+    return;
+  }
   let answer;
-  if (!isReplay) answer = await sendConfirmIsReplay(msg);
+  answer = await sendConfirmIsReplay(msg);
   buildTicket(IS_REPLAY_POOL, {
     id: answer.id,
     content: msg.content,
@@ -542,6 +547,22 @@ You can omit this error message by specifying your rank with:
  * @param {EnemyRace}  playingAgainst
  * @param {string}     url*/
 export const handleMissingData = async (msg, playingAgainst, playingAs, rank, url) => {
+  if (playingAgainst && playingAs && rank && url) {
+    buildTicket(QUEUE_POOL, {
+      id: msg.id,
+      activatedAt: Date.now(),
+      content: msg.content,
+      attachArr: msg.attachArr,
+      race: playingAs,
+      rank,
+      vsRace: playingAgainst,
+      student: msg.author,
+      emojiIdentifier: Object.keys(QUEUE_POOL).length + 1,
+    });
+    DATA_FLOW[msg.author.id].resolveInd(1);
+    console.log('all emojies were received.');
+    return;
+  }
   const [answer, actions] = await sendMissingData(msg, playingAgainst, playingAs, rank);
   buildTicket(DATA_VALIDATION_POOL, {
     attachArr: msg.attachments,

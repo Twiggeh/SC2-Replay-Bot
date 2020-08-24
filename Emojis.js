@@ -46,11 +46,11 @@ export const raceEmojis = {
 
 export const vsRaceEmojis = {
   vsTerran: {
-    id: '😈',
+    id: '🤠',
     url: 'https://cdn.discordapp.com/emojis/548901541562548238.png?v=1',
   },
   vsZerg: {
-    id: '🤠',
+    id: '😈',
     url: 'https://cdn.discordapp.com/emojis/548900104141275138.png?v=1',
   },
   vsProtoss: {
