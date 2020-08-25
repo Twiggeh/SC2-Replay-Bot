@@ -82,7 +82,7 @@ mongoose.connect(mongoDbKey, {
           clearTTimeout(ticket);
           ticket.timedOut = false;
           Object.freeze(ticket);
-          buildTicket(QUEUE_POOL, {
+          await buildTicket(QUEUE_POOL, {
             id: ticket.id,
             activatedAt: ticket.activatedAt,
             content: ticket.content,
@@ -176,41 +176,34 @@ mongoose.connect(mongoDbKey, {
 
 client.login(botKey);
 
-import { botKey, mongoDbKey } from './config/keys.js';
+import init, { DATA_VALIDATION_POOL, QUEUE_POOL, IS_REPLAY_POOL } from './init.js';
+import mongoose from 'mongoose';
 import Discord from 'discord.js';
+import { botKey, mongoDbKey } from './config/keys.js';
 import {
-  sleep,
-  shouldHandleMsg,
-  buildTicket,
-  IS_REPLAY_POOL,
-  getMsgAttachments,
-  QUEUE_POOL,
-  isPartOfPool,
-  delAllMsgs,
-  whichDataPresent,
-  clearTTimeout,
-  getRecipId,
-  hasAllProperties,
+  freeEmojiInter,
+  lockEmojiInterWGroup,
+  getActualGroup,
+  isLocked,
+  isLockedwGroup,
+} from './utils/emojiInteraction.js';
+import {
+  handleConfirmation,
   handlePushToCoaches,
   handleMissingData,
   handleConfIsReplay,
-  handleConfirmation,
-  freeEmojiInter,
-  isLockedwGroup,
-  DATA_VALIDATION_POOL,
-  isLocked,
-  lockEmojiInterWGroup,
-  getActualGroup,
-  dataFlowFactory,
-  handleUserReactedTooFast,
-  newInterruptRunner,
-  DATA_FLOW,
-  isCoachCmd,
-  handleConfigCoach,
-} from './utils.js';
-import { writeFileSync, readFileSync } from 'fs';
-import { confirmIsReplayMsg, isNotSC2Replay, isSC2Replay } from './messages.js';
-import { getCoaches } from './provider/provider.js';
+  shouldHandleMsg,
+  getRecipId,
+  clearTTimeout,
+  hasAllProperties,
+  delAllMsgs,
+  sleep,
+} from './utils/utils.js';
+import { whichDataPresent, getMsgAttachments, buildTicket } from './utils/ticket.js';
+import { newInterruptRunner } from './utils/interruptRunner.js';
+import { handleConfigCoach, isCoachCmd } from './utils/coach.js';
+import { isPartOfPool } from './utils/pool.js';
+import { DATA_FLOW } from './provider/dataFlow.js';
 import { allEmojis } from './Emojis.js';
-import mongoose from 'mongoose';
-import init from './init.js';
+import { isNotSC2Replay } from './messages.js';
+import { getCoaches } from './provider/provider.js';

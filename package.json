@@ -6,7 +6,7 @@
   "type": "module",
   "dependencies": {
     "discord.js": "^12.2.0",
-    "mongoose": "^5.9.27"
+    "mongoose": "^5.10.0"
   },
   "devDependencies": {
     "babel-eslint": "^10.1.0",

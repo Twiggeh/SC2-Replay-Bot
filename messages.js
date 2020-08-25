@@ -115,7 +115,7 @@ export const dashboardMessage = (discordCoach, page = 1) => {
     const temp = [];
     const QUEUE_KEYS = Object.keys(QUEUE_POOL);
     for (let Q_ID of QUEUE_KEYS) {
-      /** @type {import('./utils').Q_Ticket} */
+      /** @type {import('./utils/utils').Q_Ticket} */
       const ticket = QUEUE_POOL[Q_ID];
       const name = ticket.student.username;
       const race = ticket.race;
@@ -221,4 +221,4 @@ ${getCoachAbleStudents()}
 
 import { User as DiscordUser } from 'discord.js';
 import { raceEmojis, vsRaceEmojis, rankEmojis, emojiIdentifiers } from './Emojis.js';
-import { QUEUE_POOL } from './utils.js';
+import { QUEUE_POOL } from './init.js';
