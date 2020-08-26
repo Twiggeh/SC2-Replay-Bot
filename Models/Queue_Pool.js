@@ -3,6 +3,7 @@ const Queue_PoolEntrySchema = new mongoose.Schema({
   activatedAt: Number,
   content: String,
   attachArr: [],
+  url: String,
   race: String,
   rank: String,
   vsRace: String,
@@ -16,6 +17,7 @@ const Queue_PoolEntrySchema = new mongoose.Schema({
  * @prop {string} id - Id of the student
  * @prop {number} activatedAt - UTC time in ms when the student has started the coaching request
  * @prop {string} [content] - The content of the message of the student
+ * @prop {string} url - The Url detected to have a replay.
  * @prop {string[]} [attachArr] - The array with all the attachments that the student Provided on the coaching request
  * @prop {string} race - The race of the student
  * @prop {string} rank - The race of the student
