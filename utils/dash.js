@@ -21,13 +21,16 @@ export const getDashboard = async discordCoach => {
   const [{ value: coach }, { value: messages }] = cache;
 
   /**@type {Message} */
-  let dashboard = messages.get(coach?.dashboardId);
+  let dashboard = messages?.get(coach?.dashboardId);
 
   if (dashboard === undefined) {
     dashboard = await createDashboard(discordCoach);
     coach.dashboardId = dashboard.id;
     await coach.save();
   }
+
+  buildTicket(DASHBOARD_POOL, { id: dashboard.id });
+
   return dashboard;
 };
 
@@ -237,3 +240,5 @@ import { emojiIdentifiers, reqDashEmojis } from '../Emojis.js';
 import Coach from '../Models/Coach.js';
 import { getStrUTCDay } from './utils.js';
 import { Message, User as DiscordUser } from 'discord.js';
+import { DASHBOARD_POOL } from '../init.js';
+import { buildTicket } from './ticket.js';

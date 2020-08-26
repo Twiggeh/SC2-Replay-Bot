@@ -12,12 +12,12 @@ mongoose.connect(mongoDbKey, {
 
   client.on('ready', () => console.log('Bot online'));
 
+  const badEmoji = msgReact =>
+    console.log('User tried to provide wrong emote : ' + msgReact._emoji.name);
+
   client.on('messageReactionAdd', async (msgReact, user) => {
     if (user.bot) return;
     // TODO : Implement filter, right now all messages that are reacted to get pushed through here
-
-    const badEmoji = () =>
-      console.log('User tried to provide wrong emote : ' + msgReact._emoji.name);
 
     const msgInPool = isPartOfPool(msgReact.message.id);
     if (!msgInPool) {
@@ -26,12 +26,12 @@ mongoose.connect(mongoDbKey, {
       // await handleUserReactedTooFast(msgReact, user);
       // return console.error('User reacted on a message that is not in the message Pool');
     }
+    if (isLocked(msgReact, POOLS[msgInPool])) return;
 
     switch (msgInPool) {
       case 'IS_REPLAY_POOL': {
         // TODO : Lock the interaction (reactions) down.
-        const locked = isLockedwGroup(msgReact, IS_REPLAY_POOL, 'binaryAction');
-        if (locked) return;
+
         switch (msgReact._emoji.name) {
           case '✅': {
             const ticket = IS_REPLAY_POOL[msgReact.message.id];
@@ -53,7 +53,7 @@ mongoose.connect(mongoDbKey, {
             return;
           }
           default:
-            return badEmoji();
+            return badEmoji(msgReact);
         }
       }
       case 'DATA_VALIDATION_POOL': {
@@ -64,10 +64,7 @@ mongoose.connect(mongoDbKey, {
           isCorrectEmoji |= emoji.id === msgReact._emoji.name;
           isCorrectEmoji |= emoji.id === msgReact._emoji.id;
         }
-        if (!isCorrectEmoji) return badEmoji();
-
-        const locked = isLocked(msgReact, DATA_VALIDATION_POOL);
-        if (locked) return;
+        if (!isCorrectEmoji) return badEmoji(msgReact);
 
         const ticket = DATA_VALIDATION_POOL[msgReact.message.id];
         const group = getActualGroup(msgReact, DATA_VALIDATION_POOL);
@@ -100,21 +97,10 @@ mongoose.connect(mongoDbKey, {
 
         return;
       }
-      case 'QUEUE_POOL': {
-        const ticketHasPlayerWaiting = () => true;
-        const allowedEmojis = [
-          ':one:',
-          ':two:',
-          ':three:',
-          ':four:',
-          ':five:',
-          ':six:',
-          ':seven:',
-          ':eight:',
-          ':nine:',
-        ];
-        if (!allowedEmojis.includes(msgReact._emoji.name) && !ticketHasPlayerWaiting())
-          return badEmoji();
+      case 'DASHBOARD_POOL': {
+        const allowedEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '◀', '▶'];
+        if (!allowedEmojis.includes(msgReact.emoji.name)) return badEmoji(msgReact);
+        lockEmojiInter(msgReact, DASHBOARD_POOL[msgReact.message.id]);
         return;
       }
       default:
@@ -136,6 +122,14 @@ mongoose.connect(mongoDbKey, {
     switch (msgInPool) {
       case 'DATA_VALIDATION_POOL': {
         freeEmojiInter(msgReact, DATA_VALIDATION_POOL[msgReact.message.id]);
+        return;
+      }
+      case 'DASHBOARD_POOL': {
+        const allowedEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '◀', '▶'];
+        if (!allowedEmojis.includes(msgReact.emoji.name)) {
+          return badEmoji(msgReact);
+        }
+        freeEmojiInter(msgReact, DASHBOARD_POOL[msgReact.message.id]);
         return;
       }
       default:
@@ -174,7 +168,12 @@ mongoose.connect(mongoDbKey, {
 
 client.login(botKey);
 
-import init, { DATA_VALIDATION_POOL, QUEUE_POOL, IS_REPLAY_POOL } from './init.js';
+import init, {
+  DATA_VALIDATION_POOL,
+  QUEUE_POOL,
+  IS_REPLAY_POOL,
+  DASHBOARD_POOL,
+} from './init.js';
 import mongoose from 'mongoose';
 import Discord from 'discord.js';
 import { botKey, mongoDbKey } from './config/keys.js';
@@ -183,7 +182,7 @@ import {
   lockEmojiInterWGroup,
   getActualGroup,
   isLocked,
-  isLockedwGroup,
+  lockEmojiInter,
 } from './utils/emojiInteraction.js';
 import {
   handleConfirmation,
@@ -200,7 +199,7 @@ import {
 import { whichDataPresent, getMsgAttachments, buildTicket } from './utils/ticket.js';
 import { newInterruptRunner } from './utils/interruptRunner.js';
 import { handleConfigCoach, isCoachCmd } from './utils/coach.js';
-import { isPartOfPool } from './utils/pool.js';
+import { isPartOfPool, POOLS } from './utils/pool.js';
 import { DATA_FLOW } from './provider/dataFlow.js';
 import { allEmojis } from './Emojis.js';
 import { isNotSC2Replay } from './messages.js';

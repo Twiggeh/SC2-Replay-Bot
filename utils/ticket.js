@@ -28,7 +28,7 @@
  * @prop {EnemyRace}  vsRace  - VsPlayerRank
  * @typedef {T_FactoryOptions & QT_Opts} QT_FactoryOptions */
 
-/**@typedef {T_FactoryOptions & QT_FactoryOptions & DVT_FactoryOptions} AllTicket_FactoryOptions */
+/**@typedef {T_FactoryOptions & QT_FactoryOptions & DVT_FactoryOptions | D_Ticket} AllTicket_FactoryOptions */
 
 /**@typedef {Object} Ticket
  * @prop {string}  id        - Message ID
@@ -66,13 +66,21 @@
  * @prop {User} coach   - Coach that has taken on the role of coaching the user
  * @prop {User} student - Student that has Requested the coaching
  * @prop {number} emojiIdentifier - EmojiNumber that is going to allow the coach to pull the user.
+ * @prop {number} startedCoaching - Date.now() of when the student started to be coached
  * @typedef {Ticket & Q} Q_Ticket */
 
+/**@typedef {Object} D_Ticket
+ * @prop {string} id - ID of the coaches' Dashboard.
+ * @prop {string} currentlyCoaching - ID of the QUEUE_POOL entry that is currently being coached.
+ * @prop {number} startedCoaching - Date.now() of when the coach started to coach.
+ * @prop {number} endedCoaching - Date.now() of the end of the coaching session.
+ */
+
 /**@typedef AllTicket_Out
- * @type {Ticket_Out | DV_Ticket & T_Out | IR_Ticket & T_Out | Q_Ticket & T_Out} */
+ * @type { D_Ticket | Ticket_Out | DV_Ticket & T_Out | IR_Ticket & T_Out | Q_Ticket & T_Out} */
 
 export const timeOutHandler = async (ticket, system) => {
-  console.log('hello');
+  console.log('timedout');
   ticket.timedOut = true;
   switch (system) {
     case 'IS_REPLAY_POOL': {
@@ -139,6 +147,8 @@ export const getTicketTimeout = pool => {
       return 40 * 1000;
     case 'QUEUE_POOL':
       return 10 * 1000; // TODO : Make longer
+    case 'DASHBOARD_POOL':
+      return 0;
     default:
       console.error(`Wrong name provided (${pool.name})`);
   }
@@ -162,6 +172,8 @@ export const ticketFactory = (
     activatedAt,
     student,
     coach,
+    startedCoaching,
+    currentlyCoaching,
   },
   saveToDB
 ) => {
@@ -215,6 +227,7 @@ export const ticketFactory = (
         coach,
         student,
         emojiIdentifier: undefined,
+        startedCoaching: undefined,
       };
       if (saveToDB) {
         const queuePoolEntry = new Queue_PoolEntry({
@@ -235,6 +248,14 @@ export const ticketFactory = (
       }
       return result;
     }
+    case 'DASHBOARD_POOL': {
+      return {
+        id,
+        currentlyCoaching,
+        startedCoaching,
+        lockedEmojiInteractionGroups: [],
+      };
+    }
     default:
       console.error(new Error(`Wrong type (${pool.name}) provided.`));
   }
@@ -242,9 +263,9 @@ export const ticketFactory = (
 
 /**@param {import('./pool.js').Pool} pool
  * @param {AllTicket_FactoryOptions} options
- * @param {boolean} [saveToDB=true]
+ * @param {boolean} [saveToDB=false]
  */
-export const buildTicket = async (pool, options, saveToDB = true) => {
+export const buildTicket = async (pool, options, saveToDB = false) => {
   const ticket = saveToDB
     ? await ticketFactory(pool, options, saveToDB)
     : ticketFactory(pool, options, saveToDB);

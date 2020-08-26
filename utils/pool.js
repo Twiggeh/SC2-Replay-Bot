@@ -3,7 +3,7 @@
  * @type {string} name Name of the pool (on proto) */
 // TODO : Refactor into provider (Pools Provider)
 /**  @type {Object<string, Pool> } */
-const POOLS = {};
+export const POOLS = {};
 
 /** @param {string} name - Unique name of the pool @returns {Pool}*/
 export const createPool = (name, methods) => {
@@ -39,6 +39,7 @@ export const addToPool = (ticket, pool, timeOutAfter = 5 * 60 * 1000) => {
   if (pool.name === 'QUEUE_POOL') {
     ticket.emojiIdentifier = Object.keys(QUEUE_POOL).length;
   }
+  if (timeOutAfter === 0) return;
   const timeOutId = setTimeout(() => {
     try {
       timeOutHandler(ticket, pool.name);

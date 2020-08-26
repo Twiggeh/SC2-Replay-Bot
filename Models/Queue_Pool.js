@@ -9,6 +9,7 @@ const Queue_PoolEntrySchema = new mongoose.Schema({
   vsRace: String,
   coachID: String,
   studentID: String,
+  startedCoaching: Number,
 });
 
 /**
@@ -24,6 +25,7 @@ const Queue_PoolEntrySchema = new mongoose.Schema({
  * @prop {string} vsRace     - The race of the opponent
  * @prop {User["id"]} [coachID] - The Discord.User.Id of the coach
  * @prop {User["id"]} studentID - The Discord.User.Id of the student
+ * @prop {Number} startedCoaching - Date.now() of when the student has started to be coached.
  */
 /**
  ** @type {function(QPE_Opts) : mongoose.Model<mongoose.Document, {}> }}
