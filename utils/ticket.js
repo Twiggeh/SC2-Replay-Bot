@@ -162,7 +162,6 @@ export const ticketFactory = (
     activatedAt,
     student,
     coach,
-    emojiIdentifier,
   },
   saveToDB
 ) => {
@@ -215,7 +214,7 @@ export const ticketFactory = (
         vsRace,
         coach,
         student,
-        emojiIdentifier,
+        emojiIdentifier: undefined,
       };
       if (saveToDB) {
         const queuePoolEntry = new Queue_PoolEntry({
@@ -245,8 +244,11 @@ export const ticketFactory = (
  * @param {AllTicket_FactoryOptions} options
  * @param {boolean} [saveToDB=true]
  */
-export const buildTicket = (pool, options, saveToDB = true) => {
-  const ticket = ticketFactory(pool, options, saveToDB);
+export const buildTicket = async (pool, options, saveToDB = true) => {
+  const ticket = saveToDB
+    ? await ticketFactory(pool, options, saveToDB)
+    : ticketFactory(pool, options, saveToDB);
+
   const timeout = getTicketTimeout(pool);
   addToPool(ticket, pool, timeout);
   return ticket;

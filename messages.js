@@ -67,6 +67,10 @@ export const reactedTooFast = {
 Please restart the process, and if possible, include all of the data tags that are required!`,
 };
 
+// TODO : PAGINATION DOESN'T WORK
+// TODO : HOURS DON'T DISPLAY PROPERLY (01 hour[S]                                88.45 mins        )
+// TODO                                         ^= should not have an s in there   ^= did not get reduced in the 60 interval
+
 /**@param {DiscordUser} discordCoach
  * @param {Number} page
  */
@@ -133,7 +137,9 @@ export const dashboardMessage = (discordCoach, page = 1) => {
             }`
           : `${minsElapsed.toFixed(2).padStart(4, '0')} mins`
       }`;
-      const ID = emojiIdentifiers[ticket.emojiIdentifier].id;
+      const ID = emojiIdentifiers[ticket.emojiIdentifier]?.id
+        ? emojiIdentifiers[ticket.emojiIdentifier].id
+        : ticket.emojiIdentifier;
       temp[ticket.emojiIdentifier] = {
         ID,
         name,

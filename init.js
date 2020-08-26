@@ -115,15 +115,13 @@ const init = async () => {
       .flatMap(el => el.value)
       .filter(el => !!el);
 
-    tickets.forEach((ticket, i) => {
-      if (i < 5) ticket.emojiIdentifier = i + 1;
-
+    tickets.forEach(ticket =>
       addToPool(
         ticket,
         QUEUE_POOL,
         Math.max(10, getTicketTimeout(QUEUE_POOL) - Date.now() + ticket.activatedAt)
-      );
-    });
+      )
+    );
   }
   await updateAllDashboards();
 };

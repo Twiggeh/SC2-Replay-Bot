@@ -91,7 +91,6 @@ mongoose.connect(mongoDbKey, {
             rank: ticket.rank,
             vsRace: ticket.vsRace,
             student: ticket.origMsg.author,
-            emojiIdentifier: Object.keys(QUEUE_POOL).length + 1,
           });
           DATA_FLOW[getRecipId(msgReact)].resolveInd(1);
 

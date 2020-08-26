@@ -36,6 +36,9 @@ export const delFromAllPools = id => {
 export const addToPool = (ticket, pool, timeOutAfter = 5 * 60 * 1000) => {
   ticket.pool = pool;
   pool[ticket.id] = ticket;
+  if (pool.name === 'QUEUE_POOL') {
+    ticket.emojiIdentifier = Object.keys(QUEUE_POOL).length;
+  }
   const timeOutId = setTimeout(() => {
     try {
       timeOutHandler(ticket, pool.name);
@@ -47,3 +50,4 @@ export const addToPool = (ticket, pool, timeOutAfter = 5 * 60 * 1000) => {
 };
 
 import { timeOutHandler } from './ticket.js';
+import { QUEUE_POOL } from '../init.js';

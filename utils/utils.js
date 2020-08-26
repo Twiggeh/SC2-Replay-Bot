@@ -205,7 +205,6 @@ export const handleMissingData = async (msg, playingAgainst, playingAs, rank, ur
       rank,
       vsRace: playingAgainst,
       student: msg.author,
-      emojiIdentifier: Object.keys(QUEUE_POOL).length + 1,
     });
     DATA_FLOW[msg.author.id].resolveInd(1);
     console.log('all emojies were received.');
