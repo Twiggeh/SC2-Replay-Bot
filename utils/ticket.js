@@ -33,13 +33,18 @@
 /**@typedef {Object} Ticket
  * @prop {string}  id        - Message ID
  * @prop {string}  url       - Url of the first detected replay
+
+ * @prop {boolean} emergency - If this ticket has been neglected for too long.
+ * @prop {string}  activatedAt      - The time at which the ticket got created
+ * @prop {Message["attachments"]} attachArr - Array with all the Attachments of the orig msg */
+
+/** @typedef {Object} T_Out
  * @prop {Pool}    pool      - Instance of POOL
  * @prop {string}  content   - Message Content
  * @prop {boolean} timedOut  - Whether the message has timed out
  * @prop {number}  timeOutId - The timeoutId
- * @prop {boolean} emergency - If this ticket has been neglected for too long.
- * @prop {string}  activatedAt      - The time at which the ticket got created
- * @prop {Message["attachments"]} attachArr - Array with all the Attachments of the orig msg */
+ * @typedef {Ticket & T_Out} Ticket_Out
+ */
 
 /**@typedef {Object} IR_T
  * @prop {Message} origMsg   - Discord Message
@@ -63,99 +68,8 @@
  * @prop {number} emojiIdentifier - EmojiNumber that is going to allow the coach to pull the user.
  * @typedef {Ticket & Q} Q_Ticket */
 
-/**@typedef AllTickets
- * @type {Ticket | DV_Ticket | IR_Ticket | Q_Ticket} */
-
-/**@param {Pool} pool Instance of POOL
- * @param {AllTicket_FactoryOptions} param1
- * @return {AllTickets | Promise<AllTickets>}*/
-export const ticketFactory = (
-  pool,
-  {
-    id,
-    content,
-    url,
-    attachArr,
-    origMsg,
-    race,
-    vsRace,
-    rank,
-    activatedAt,
-    student,
-    coach,
-    emojiIdentifier,
-  }
-) => {
-  switch (pool.name) {
-    case 'DATA_VALIDATION_POOL':
-      return {
-        id,
-        hasBeenReactedTo: false,
-        reactionHistory: [],
-        activatedAt: Date.now(),
-        timedOut: false,
-        timeOutId: undefined,
-        emergency: false,
-        lockedEmojiInteractionGroups: [],
-        race,
-        attachArr,
-        vsRace,
-        rank,
-        content,
-        origMsg,
-        url,
-      };
-    case 'IS_REPLAY_POOL':
-      return {
-        id,
-        hasBeenReactedTo: false,
-        reactionHistory: [],
-        activatedAt: Date.now(),
-        timedOut: false,
-        timeOutId: undefined,
-        emergency: false,
-        lockedEmojiInteractionGroups: [],
-        content,
-        origMsg,
-        url,
-        attachArr,
-      };
-    case 'QUEUE_POOL': {
-      return (async () => {
-        const queuePoolEntry = new Queue_PoolEntry({
-          id,
-          activatedAt,
-          content,
-          race,
-          rank,
-          vsRace,
-          coachID: coach?.id,
-          studentID: student.id,
-          attachArr,
-        });
-        await queuePoolEntry.save();
-        return {
-          id,
-          activatedAt,
-          timedOut: false,
-          timeOutId: undefined,
-          emergency: false,
-          lockedEmojiInteractionGroups: [],
-          content,
-          attachArr,
-          race,
-          rank,
-          vsRace,
-          coach,
-          student,
-          emojiIdentifier,
-        };
-      })();
-    }
-    default:
-      console.error(new Error(`Wrong type (${pool.name}) provided.`));
-  }
-};
+/**@typedef AllTicket_Out
+ * @type {Ticket_Out | DV_Ticket & T_Out | IR_Ticket & T_Out | Q_Ticket & T_Out} */
 
 export const timeOutHandler = async (ticket, system) => {
   console.log('hello');
@@ -214,7 +128,10 @@ export const timeOutHandler = async (ticket, system) => {
   }
 };
 
-const getTicketTimeout = pool => {
+/**
+ * @param {import('./pool.js').Pool} pool
+ */
+export const getTicketTimeout = pool => {
   switch (pool.name) {
     case 'IS_REPLAY_POOL':
       return 10 * 1000;
@@ -227,11 +144,109 @@ const getTicketTimeout = pool => {
   }
 };
 
-/**@param   {Pool} pool
- * @param   {AllTicket_FactoryOptions} options
+/**@param {Pool} pool Instance of POOL
+ * @param {AllTicket_FactoryOptions} param1
+ * @param {boolean} saveToDB - Whether to save to the database
+ * @return { AllTicket_Out | Promise<AllTicket_Out>}*/
+export const ticketFactory = (
+  pool,
+  {
+    id,
+    content,
+    url,
+    attachArr,
+    origMsg,
+    race,
+    vsRace,
+    rank,
+    activatedAt,
+    student,
+    coach,
+    emojiIdentifier,
+  },
+  saveToDB
+) => {
+  switch (pool.name) {
+    case 'DATA_VALIDATION_POOL':
+      return {
+        id,
+        hasBeenReactedTo: false,
+        reactionHistory: [],
+        activatedAt: Date.now(),
+        timedOut: false,
+        timeOutId: undefined,
+        emergency: false,
+        lockedEmojiInteractionGroups: [],
+        race,
+        attachArr,
+        vsRace,
+        rank,
+        content,
+        origMsg,
+        url,
+      };
+    case 'IS_REPLAY_POOL':
+      return {
+        id,
+        hasBeenReactedTo: false,
+        reactionHistory: [],
+        activatedAt: Date.now(),
+        timedOut: false,
+        timeOutId: undefined,
+        emergency: false,
+        lockedEmojiInteractionGroups: [],
+        content,
+        origMsg,
+        url,
+        attachArr,
+      };
+    case 'QUEUE_POOL': {
+      const result = {
+        id,
+        activatedAt,
+        timedOut: false,
+        timeOutId: undefined,
+        emergency: false,
+        lockedEmojiInteractionGroups: [],
+        content,
+        attachArr,
+        race,
+        rank,
+        vsRace,
+        coach,
+        student,
+        emojiIdentifier,
+      };
+      if (saveToDB) {
+        const queuePoolEntry = new Queue_PoolEntry({
+          id,
+          activatedAt,
+          content,
+          race,
+          rank,
+          vsRace,
+          coachID: coach?.id,
+          studentID: student.id,
+          attachArr,
+        });
+        return (async () => {
+          await queuePoolEntry.save();
+          return result;
+        })();
+      }
+      return result;
+    }
+    default:
+      console.error(new Error(`Wrong type (${pool.name}) provided.`));
+  }
+};
+
+/**@param {import('./pool.js').Pool} pool
+ * @param {AllTicket_FactoryOptions} options
+ * @param {boolean} [saveToDB=true]
  */
-export const buildTicket = async (pool, options) => {
-  const ticket = await ticketFactory(pool, options);
+export const buildTicket = (pool, options, saveToDB = true) => {
+  const ticket = ticketFactory(pool, options, saveToDB);
   const timeout = getTicketTimeout(pool);
   addToPool(ticket, pool, timeout);
   return ticket;
