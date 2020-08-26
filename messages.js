@@ -67,18 +67,31 @@ export const reactedTooFast = {
 Please restart the process, and if possible, include all of the data tags that are required!`,
 };
 
-// TODO : PAGINATION DOESN'T WORK
-// TODO : HOURS DON'T DISPLAY PROPERLY (01 hour[S]                                88.45 mins        )
-// TODO                                         ^= should not have an s in there   ^= did not get reduced in the 60 interval
-
-/**@param {DiscordUser} discordCoach
+/**
+ * Builds the entire Dashboard Text
+ * @param {DiscordUser} discordCoach
  * @param {Number} page
+ * @return {String}
  */
-export const dashboardMessage = (discordCoach, page = 1) => {
+export const dashboardMessage = (discordCoach, page = 1, maxEl = 5) => {
+  const QUEUE_POOL_KEYS = Object.keys(QUEUE_POOL);
+  // local copy of QUEUE_POOL, so that it is easier to paginate.
+  const _QUEUE_POOL = {};
+  for (
+    let i = (page - 1) * maxEl;
+    i < Math.min(maxEl * page, QUEUE_POOL_KEYS.length);
+    i++
+  ) {
+    _QUEUE_POOL[QUEUE_POOL_KEYS[i]] = QUEUE_POOL[QUEUE_POOL_KEYS[i]];
+  }
+
   const greeting = `Hello, ${discordCoach.username}!`;
+
   const getUnderline = (str, char = '=') => char.repeat(str.length);
+
   const getCoachAbleStudents = () => {
-    const qLength = Object.keys(QUEUE_POOL).length;
+    // TODO : differentiate between students and replays.
+    const qLength = Object.keys(_QUEUE_POOL).length;
     return `Currently there ${
       qLength === 0
         ? 'are no students'
@@ -87,6 +100,7 @@ export const dashboardMessage = (discordCoach, page = 1) => {
         : `are ${qLength} students`
     } to coach.`;
   };
+
   /**@typedef RenderData
    * @prop {string} ID - The emojiIdentifier that the coach will react with to get to coach the user
    * @prop {string} name - Name of the Student
@@ -94,13 +108,17 @@ export const dashboardMessage = (discordCoach, page = 1) => {
    * @prop {string} vsRace - Race of the Opponent
    * @prop {string} rank - Rank of the Student
    * @prop {string} waitingFor - How long the user has been waiting for to be coached
-   * @prop {string} beingCoached - The coach actively coaching the user. */
-  /** @param {Number} page */
+   * @prop {string} beingCoached - The coach actively coaching the user.
+   */
+
+  /** Builds the table representation of the students that are waiting to be coached.
+   * @param {Number} page */
   const getStudentTable = () => {
-    if (Object.keys(QUEUE_POOL).length === 0) return '';
+    if (QUEUE_POOL_KEYS.length === 0) return '';
     // TODO : add max width container
     let result = '';
 
+    // Holds the longest elements that are going to be displayed in the table
     /**@type {Object<string, number>} */
     const longestDataStr = {
       ID: undefined,
@@ -116,11 +134,12 @@ export const dashboardMessage = (discordCoach, page = 1) => {
     }
 
     /** @type {[RenderData]} */
-    const temp = [];
-    const QUEUE_KEYS = Object.keys(QUEUE_POOL);
-    for (let Q_ID of QUEUE_KEYS) {
+    const dataToRender = [];
+    const _QUEUE_POOL_KEYS = Object.keys(_QUEUE_POOL);
+
+    for (let Q_ID of _QUEUE_POOL_KEYS) {
       /** @type {import('./utils/utils').Q_Ticket} */
-      const ticket = QUEUE_POOL[Q_ID];
+      const ticket = _QUEUE_POOL[Q_ID];
       const name = ticket.student.username;
       const race = ticket.race;
       const rank = ticket.rank;
@@ -131,31 +150,33 @@ export const dashboardMessage = (discordCoach, page = 1) => {
       const waitingFor = `${
         minsElapsed / 60 > 1
           ? `${(Math.floor(minsElapsed / 60) + '').padStart(2, '0')} hour${
-              minsElapsed / 60 > 1 ? 's' : ''
-            }  ${minsElapsed.toFixed(2).padStart(4, '0')} min${
-              minsElapsed % 60 === 1 ? '' : 's'
+              Math.floor(minsElapsed / 60) > 1 ? 's' : ''
+            }  ${(minsElapsed % 60).toFixed(2).padStart(4, '0')} min${
+              minsElapsed % 60 > 1 ? 's' : ''
             }`
           : `${minsElapsed.toFixed(2).padStart(4, '0')} mins`
       }`;
       const ID = emojiIdentifiers[ticket.emojiIdentifier]?.id
         ? emojiIdentifiers[ticket.emojiIdentifier].id
         : ticket.emojiIdentifier;
-      temp[ticket.emojiIdentifier] = {
-        ID,
-        name,
-        race,
-        rank,
-        vsRace,
-        waitingFor,
-        beingCoached,
+      dataToRender[ticket.emojiIdentifier] = {
+        ID: String(ID),
+        name: String(name),
+        race: String(race),
+        rank: String(rank),
+        vsRace: String(vsRace),
+        waitingFor: String(waitingFor),
+        beingCoached: String(beingCoached),
       };
-      let i = 5 * (page - 1);
+      // TODO : maybe implement without using _QUEUE_POOL
+      // let i = maxEl * (page - 1);
       for (let key in longestDataStr) {
-        if (i === 5 * page) break;
+        // if (i === maxEl * page) break;
         longestDataStr[key] = Math.max(
           longestDataStr[key],
-          temp[ticket.emojiIdentifier][key].length
+          dataToRender[ticket.emojiIdentifier][key].length
         );
+        //i++;
       }
     }
 
@@ -190,9 +211,10 @@ export const dashboardMessage = (discordCoach, page = 1) => {
     };
     result += getTableLegend();
 
-    for (let i = 1; i < temp.length; i++) {
+    for (let i = 1; i < dataToRender.length; i++) {
       const data = [];
-      const row = temp[i];
+      const row = dataToRender[i];
+      if (row === undefined) continue;
       for (let key in row) {
         data.push({ content: row[key], maxLength: longestDataStr[key] });
       }
@@ -200,7 +222,7 @@ export const dashboardMessage = (discordCoach, page = 1) => {
     }
     const paginationStr = `Page ${page} / ${Math.max(
       1,
-      Math.ceil((temp.length - 1) / 5)
+      Math.ceil((QUEUE_POOL_KEYS.length - 1) / maxEl)
     )}`; // TODO : change to normal indexies
     result += formatData([
       {

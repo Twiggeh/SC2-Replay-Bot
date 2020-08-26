@@ -14,7 +14,6 @@ mongoose.connect(mongoDbKey, {
 
   client.on('messageReactionAdd', async (msgReact, user) => {
     if (user.bot) return;
-    // TODO : Coaches cannot be coached.
     // TODO : Implement filter, right now all messages that are reacted to get pushed through here
 
     const badEmoji = () =>
