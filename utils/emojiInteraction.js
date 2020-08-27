@@ -94,11 +94,23 @@ export const freeEmojiInter = (msgReact, ticket) => {
   freeEmojiInterWGroup(actualGroup, ticket, msgReact);
 };
 
-/**@param {string}          group
- * @param {AllTickets}      ticket */
+/**@param {string}     group
+ * @param {AllTickets} ticket
+ * @param {MessageReaction} msgReact
+ *  */
 export const freeEmojiInterWGroup = (group, ticket, msgReact) => {
   const groupIndex = ticket.lockedEmojiInteractionGroups.indexOf(group);
   if (groupIndex === -1) return console.error(`Group (${group}) is already unlocked.`);
+  if (
+    includesAnyArr(
+      msgReact.message.reactions.cache
+        .array()
+        .filter(el => el.count !== 1)
+        .map(el => emojiFromMsgReact(el)),
+      emojiInteractions[ticket.pool.name][group].emojis
+    )
+  )
+    return;
   ticket.lockedEmojiInteractionGroups.splice(groupIndex, 1);
   emojiInteractions[ticket.pool.name][group].onDel?.(ticket, msgReact);
 };
@@ -127,4 +139,5 @@ export const isLockedwGroup = (msgReact, pool, group) => {
   if (index === -1) return false;
   return true;
 };
-import { Emoji, MessageReaction } from 'discord.js';
+import { Emoji, MessageReaction, Message } from 'discord.js';
+import { includesAnyArr } from './utils.js';
