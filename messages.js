@@ -91,7 +91,7 @@ export const dashboardMessage = (discordCoach, page = 1, maxEl = 5) => {
 
   const getCoachAbleStudents = () => {
     // TODO : differentiate between students and replays.
-    const qLength = Object.keys(_QUEUE_POOL).length;
+    const qLength = QUEUE_POOL_KEYS.length;
     return `Currently there ${
       qLength === 0
         ? 'are no students'
@@ -222,7 +222,7 @@ export const dashboardMessage = (discordCoach, page = 1, maxEl = 5) => {
     }
     const paginationStr = `Page ${page} / ${Math.max(
       1,
-      Math.ceil((QUEUE_POOL_KEYS.length - 1) / maxEl)
+      Math.ceil(QUEUE_POOL_KEYS.length / maxEl)
     )}`; // TODO : change to normal indexies
     result += formatData([
       {
