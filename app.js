@@ -98,7 +98,7 @@ mongoose.connect(mongoDbKey, {
         return;
       }
       case 'DASHBOARD_POOL': {
-        const allowedEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '◀', '▶'];
+        const allowedEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '◀', '▶️'];
         if (!allowedEmojis.includes(msgReact.emoji.name)) return badEmoji(msgReact);
         lockEmojiInter(msgReact, DASHBOARD_POOL[msgReact.message.id]);
         return;
@@ -125,7 +125,7 @@ mongoose.connect(mongoDbKey, {
         return;
       }
       case 'DASHBOARD_POOL': {
-        const allowedEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '◀', '▶'];
+        const allowedEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '◀', '▶️'];
         if (!allowedEmojis.includes(msgReact.emoji.name)) {
           return badEmoji(msgReact);
         }

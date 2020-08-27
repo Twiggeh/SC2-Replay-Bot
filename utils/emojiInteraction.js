@@ -1,10 +1,10 @@
 /**@typedef EmojisAndMethods
  * @type {Object}
  * @prop {string[]} emojis All emojis belonging to the group
- * @prop {function} onAdd Runs when the group is unlocked
+ * @prop {function(import("./ticket").AllTicket_Out, Emoji, MessageReaction): void } onAdd Runs when the group is unlocked
  *                        (no other emoji in the group is active),
  *                        and the user reacts with an emoji from this group.
- * @prop {function} onDel Runs when the user removes a reaction belonging to this group. */
+ * @prop {function(import("./ticket").AllTicket_Out, MessageReaction): void} onDel Runs when the user removes a reaction belonging to this group. */
 
 /**@typedef EmojiGroupName
  * @type {string} Unique name of the group */
@@ -16,6 +16,7 @@
 const emojiInteractions = {};
 
 /**
+ *
  * @param {{object}} obj Any Object
  * @param {{(Array|string)}} propPath The path to set of the object
  * @param {*} value Any value to set at path
@@ -83,23 +84,23 @@ export const lockEmojiInterWGroup = (group, ticket, msgReact) => {
   const groupIndex = ticket.lockedEmojiInteractionGroups.indexOf(group);
   if (groupIndex !== -1) return console.error(`Group (${group}) already locked down.`);
   ticket.lockedEmojiInteractionGroups.push(group);
-  emojiInteractions[ticket.pool.name][group].onAdd?.(ticket, emoji);
+  emojiInteractions[ticket.pool.name][group].onAdd?.(ticket, emoji, msgReact);
 };
 
 /**@param {AllTickets}      ticket
  * @param {MessageReaction} msgReact */
 export const freeEmojiInter = (msgReact, ticket) => {
   const actualGroup = getActualGroup(msgReact, ticket.pool);
-  freeEmojiInterWGroup(actualGroup, ticket);
+  freeEmojiInterWGroup(actualGroup, ticket, msgReact);
 };
 
 /**@param {string}          group
  * @param {AllTickets}      ticket */
-export const freeEmojiInterWGroup = (group, ticket) => {
+export const freeEmojiInterWGroup = (group, ticket, msgReact) => {
   const groupIndex = ticket.lockedEmojiInteractionGroups.indexOf(group);
   if (groupIndex === -1) return console.error(`Group (${group}) is already unlocked.`);
   ticket.lockedEmojiInteractionGroups.splice(groupIndex, 1);
-  emojiInteractions[ticket.pool.name][group].onDel?.(ticket);
+  emojiInteractions[ticket.pool.name][group].onDel?.(ticket, msgReact);
 };
 
 /**@param {MessageReaction} msgReact
@@ -126,3 +127,4 @@ export const isLockedwGroup = (msgReact, pool, group) => {
   if (index === -1) return false;
   return true;
 };
+import { Emoji, MessageReaction } from 'discord.js';

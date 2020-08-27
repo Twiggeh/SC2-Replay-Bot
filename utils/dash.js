@@ -196,33 +196,52 @@ export const putAllReactsOnDashes = async dashes => {
  */
 export const getPages = dash => {
   const contentArr = dash.content.split('\n');
-  const [curPage = 1, maxPage = 1] = contentArr[contentArr.length - 1]
+  let index = -1;
+  for (let i = contentArr.length - 1; i > -1; i--) {
+    if (index === -1 && contentArr[i].includes('Page')) index = i;
+  }
+
+  const [curPage, maxPage] = contentArr[index]
     .split('/')
-    .map(el => parseInt(el));
+    .map(el => parseInt(filterNum(el)));
+  if (
+    isNaN(curPage) ||
+    isNaN(maxPage) ||
+    curPage === undefined ||
+    maxPage === undefined
+  ) {
+    return [1, 1];
+  }
   return [curPage, maxPage];
 };
 /**
- * @param {Message} dash
+ * @type {import('./emojiInteraction.js').EmojisAndMethods["onAdd"]}
+ * @param {import('./ticket.js').D_Ticket} dashTicket
  */
-export const goToNextPage = dash => {
-  const [curPage, maxPage] = getPages(dash);
+export const goToNextPage = (dashTicket, emoji, msgReact) => {
+  const msg = msgReact.message;
+  const [curPage, maxPage] = getPages(msg);
   if (curPage >= maxPage) {
     console.log('nowhere to go to ');
     // TODO: Throw error at user.
     return;
   }
-  dash.edit(dashboardMessage(dash.channel.recipient, curPage + 1));
+  msg.edit(dashboardMessage(msg.channel.recipient, curPage + 1));
 };
 
-/** @param {Message} dash */
-export const goToPrevPage = dash => {
-  const [curPage, maxPage] = getPages(dash);
+/**
+ * @type {import('./emojiInteraction.js').EmojisAndMethods["onAdd"]}
+ * @param {import('./ticket.js').D_Ticket} dashTicket
+ */
+export const goToPrevPage = (dashTicket, emoji, msgReact) => {
+  const msg = msgReact.message;
+  const [curPage, maxPage] = getPages(msg);
   if (curPage <= 1) {
     console.log('nowhere to go to ');
     // TODO: Throw error at user.
     return;
   }
-  dash.edit(dashboardMessage(dash.channel.recipient, curPage - 1));
+  msg.edit(dashboardMessage(msg.channel.recipient, curPage - 1));
 };
 
 export const selectStudent = () => {
@@ -238,7 +257,7 @@ import { getDBCoach } from './coach.js';
 import { client } from '../app.js';
 import { emojiIdentifiers, reqDashEmojis } from '../Emojis.js';
 import Coach from '../Models/Coach.js';
-import { getStrUTCDay } from './utils.js';
+import { getStrUTCDay, filterNum } from './utils.js';
 import { Message, User as DiscordUser } from 'discord.js';
 import { DASHBOARD_POOL } from '../init.js';
 import { buildTicket } from './ticket.js';

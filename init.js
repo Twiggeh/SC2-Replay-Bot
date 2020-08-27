@@ -49,11 +49,11 @@ registerEmojiInteraction(DATA_VALIDATION_POOL, {
 
 registerEmojiInteraction(DASHBOARD_POOL, {
   prevPage: {
-    emojis: ['▶'],
+    emojis: ['◀'],
     onAdd: goToPrevPage,
   },
   nextPage: {
-    emojis: ['◀'],
+    emojis: ['▶️'],
     onAdd: goToNextPage,
   },
   selectStudent: {
@@ -65,14 +65,10 @@ registerEmojiInteraction(DASHBOARD_POOL, {
 
 const init = async () => {
   // LOAD COACHES
-  // TODO : RE- Make Dashboards for people that have a message reaction.
-  // TODO : Run the emoji reactor on all the dashboards that are instantiated,
-  // TODO : so that network related errors are not going to affect the operation of
-  // TODO : the bot.
   const dashboards = await createCoaches(allCoachIds);
-  const cache = [];
+  const ticketCache = [];
   dashboards.forEach(dashboard => {
-    cache.push(
+    ticketCache.push(
       (async () => {
         /** @type {import('./Models/Queue_Pool.js').QPE_Opts[]} */
         const qPEntries = [
@@ -81,14 +77,27 @@ const init = async () => {
           })),
         ];
 
-        if (qPEntries.length === 0) {
-          // TODO : derive 44 from the actual message with the message methods
-          if (dashboard.content.includes('|', 44)) {
-            await dashboard.delete();
-            await getDashboard(dashboard.channel.recipient);
-          }
-          return [undefined];
+        let recreateDash = 0;
+
+        const foundEmoji = [];
+        recreateDash |= !dashboard.reactions.cache.every(react => {
+          foundEmoji.push(
+            DashEmojis.includes(react.emoji.name) | DashEmojis.includes(react.emoji.name)
+          );
+          return react.count === 1;
+        });
+        recreateDash |=
+          (foundEmoji.length !== 7) | !foundEmoji.reduce((acc, cur) => acc & cur);
+        // TODO : derive 44 from the actual message with the message methods
+        recreateDash |= qPEntries.length === 0 && dashboard.content.includes('|', 44);
+
+        if (recreateDash) {
+          await dashboard.delete();
+          await getDashboard(dashboard.channel.recipient);
         }
+
+        if (qPEntries.length === 0) return [undefined];
+
         const result = qPEntries.map(qPEntry => {
           const dashOfCoach = dashboards.find(dash => dash.author.id === qPEntry.coachID);
 
@@ -124,7 +133,7 @@ const init = async () => {
   });
 
   /** @type {import('./utils/ticket.js').AllTicket_Out[]} */
-  const tickets = (await Promise.allSettled(cache))
+  const tickets = (await Promise.allSettled(ticketCache))
     .flatMap(el => el.value)
     .filter(el => !!el);
 
@@ -139,7 +148,14 @@ const init = async () => {
   await updateAllDashboards();
 };
 
-import { rankEmojis, raceEmojis, vsRaceEmojis } from './Emojis.js';
+import {
+  rankEmojis,
+  raceEmojis,
+  vsRaceEmojis,
+  emojiIdentifiers,
+  reqDashEmojis,
+  DashEmojis,
+} from './Emojis.js';
 import { registerEmojiInteraction, onAddHelper } from './utils/emojiInteraction.js';
 import { createPool, addToPool } from './utils/pool.js';
 import {

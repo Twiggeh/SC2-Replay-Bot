@@ -304,6 +304,17 @@ export const includesAnyArr = (arr1, arr2) => {
   return result;
 };
 
+/**
+ * @param {string} str - Filters everything out that is not a number
+ */
+export const filterNum = str => {
+  const numericalChar = new Set(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
+  return str
+    .split('')
+    .filter(char => numericalChar.has(char))
+    .join('');
+};
+
 import { updateAllDashboards, date } from './dash.js';
 import {
   confirmIsReplayMsg,
