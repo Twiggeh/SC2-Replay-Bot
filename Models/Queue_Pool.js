@@ -22,13 +22,13 @@ const Queue_PoolEntrySchema = new mongoose.Schema({
  * @prop {string[]} [attachArr] - The array with all the attachments that the student Provided on the coaching request
  * @prop {string} race - The race of the student
  * @prop {string} rank - The race of the student
- * @prop {string} vsRace     - The race of the opponent
+ * @prop {string} vsRace - The race of the opponent
  * @prop {User["id"]} [coachID] - The Discord.User.Id of the coach
  * @prop {User["id"]} studentID - The Discord.User.Id of the student
  * @prop {Number} startedCoaching - Date.now() of when the student has started to be coached.
  */
 /**
- ** @type {function(QPE_Opts) : mongoose.Model<mongoose.Document, {}> }}
+ * @type {function(new:mongoose.Model<mongoose.Document, {}>, QPE_Opts ) }}
  */
 const Queue_PoolEntry = mongoose.model('Queue_PoolEntry', Queue_PoolEntrySchema);
 export default Queue_PoolEntry;
