@@ -298,7 +298,7 @@ export const getStrUTCDay = num => {
 
 export const includesAnyArr = (arr1, arr2) => {
   let result = 0;
-  for (let i = 0; i < arr1.length; i++) {
+  for (let i = 0; i < arr2.length; i++) {
     result |= arr1.includes(arr2[i]);
   }
   return result;
