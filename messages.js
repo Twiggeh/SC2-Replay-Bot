@@ -247,6 +247,14 @@ ${getCoachAbleStudents()}
   };
 };
 
+export const successfulCoaching = {
+  content: `Were you satisfied with the coach?
+If the answer is no and you would like to go again, please react with 🛑.
+If everything was to your liking then you can react with ✅.
+
+If there was a lot of useful information, that you think could help other people you could make a small writeup and submit it to our replay channel!`,
+};
+
 import { User as DiscordUser } from 'discord.js';
 import { raceEmojis, vsRaceEmojis, rankEmojis, numberIdent } from './Emojis.js';
 import { QUEUE_POOL } from './init.js';
