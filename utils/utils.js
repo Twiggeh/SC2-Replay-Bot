@@ -237,6 +237,7 @@ const coachIds = ['145856913014259712'];
 /**@param {DV_Ticket} ticket
  * @return {Promise<void>} */
 export const handlePushToCoaches = async () => {
+  updateQueuePool();
   await updateAllDashboards();
 };
 
@@ -345,4 +346,4 @@ import {
   pRankCuts,
   dRankCuts,
 } from '../config/global.js';
-import { delFromAllPools } from './pool.js';
+import { delFromAllPools, updateQueuePool } from './pool.js';

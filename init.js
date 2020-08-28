@@ -65,18 +65,19 @@ registerEmojiInteraction(DASHBOARD_POOL, {
 
 const init = async () => {
   // LOAD COACHES
-  const dashboards = await createCoaches(allCoachIds);
+  const initCache = [createCoaches(allCoachIds), Queue_PoolEntry.find({})];
+
+  const [{ value: dashboards }, { value: allQueueEntries }] = await Promise.allSettled(
+    initCache
+  );
+
+  /** @type {import('./Models/Queue_Pool.js').QPE_Opts[]} */
+  const qPEntries = [...allQueueEntries];
+
   const ticketCache = [];
   dashboards.forEach(dashboard => {
     ticketCache.push(
       (async () => {
-        /** @type {import('./Models/Queue_Pool.js').QPE_Opts[]} */
-        const qPEntries = [
-          ...(await Queue_PoolEntry.find({
-            studentID: dashboard.channel.recipient.id,
-          })),
-        ];
-
         let recreateDash = 0;
 
         const foundEmoji = [];
@@ -87,7 +88,7 @@ const init = async () => {
           return react.count === 1;
         });
         recreateDash |=
-          (foundEmoji.length !== 7) | !foundEmoji.reduce((acc, cur) => acc & cur);
+          foundEmoji.length !== 7 || !foundEmoji.reduce((acc, cur) => acc & cur);
         // TODO : derive 44 from the actual message with the message methods
         recreateDash |= qPEntries.length === 0 && dashboard.content.includes('|', 44);
 
@@ -98,16 +99,11 @@ const init = async () => {
 
         if (qPEntries.length === 0) return [undefined];
 
-        const result = qPEntries.map(qPEntry => {
-          const dashOfCoach = dashboards.find(dash => dash.author.id === qPEntry.coachID);
-
-          if (dashOfCoach) {
-            buildTicket(DASHBOARD_POOL, {
-              id: dashOfCoach.id,
-              currentlyCoaching: qPEntry.id,
-              startedCoaching: qPEntry.startedCoaching,
-            });
-          }
+        qPEntries.forEach(qPEntry => {
+          const dashOfCoach = dashboards.find(
+            /** @param {Message} dash */
+            dash => dash.channel.recipient.id === qPEntry.coachID
+          );
 
           /** @type {import('./utils/ticket.js').Q_Ticket} */
           const options = {
@@ -125,39 +121,33 @@ const init = async () => {
             startedCoaching: qPEntry.startedCoaching,
           };
 
-          return ticketFactory(QUEUE_POOL, options, false);
+          if (dashOfCoach) {
+            buildTicket(DASHBOARD_POOL, {
+              id: dashOfCoach.id,
+              currentlyCoaching: qPEntry.id,
+              startedCoaching: qPEntry.startedCoaching,
+            });
+          }
+
+          buildTicket(
+            QUEUE_POOL,
+            options,
+            false,
+            Math.max(10, getTicketTimeout(QUEUE_POOL) - Date.now() + options.activatedAt)
+          );
         });
-        return result;
       })()
     );
   });
 
-  /** @type {import('./utils/ticket.js').AllTicket_Out[]} */
-  const tickets = (await Promise.allSettled(ticketCache))
-    .flatMap(el => el.value)
-    .filter(el => !!el);
-
-  tickets.forEach(ticket =>
-    addToPool(
-      ticket,
-      QUEUE_POOL,
-      Math.max(10, getTicketTimeout(QUEUE_POOL) - Date.now() + ticket.activatedAt)
-    )
-  );
-
+  await Promise.allSettled(ticketCache);
+  updateQueuePool();
   await updateAllDashboards();
 };
 
-import {
-  rankEmojis,
-  raceEmojis,
-  vsRaceEmojis,
-  emojiIdentifiers,
-  reqDashEmojis,
-  DashEmojis,
-} from './Emojis.js';
+import { rankEmojis, raceEmojis, vsRaceEmojis, DashEmojis } from './Emojis.js';
 import { registerEmojiInteraction, onAddHelper } from './utils/emojiInteraction.js';
-import { createPool, addToPool } from './utils/pool.js';
+import { createPool, updateQueuePool } from './utils/pool.js';
 import {
   finishedCoachingStudent,
   goToPrevPage,
@@ -167,7 +157,8 @@ import {
   updateAllDashboards,
 } from './utils/dash.js';
 import { createCoaches } from './utils/coach.js';
-import { ticketFactory, getTicketTimeout, buildTicket } from './utils/ticket.js';
+import { getTicketTimeout, buildTicket } from './utils/ticket.js';
 import Queue_PoolEntry from './Models/Queue_Pool.js';
+import { Message } from 'discord.js';
 
 export default init;
