@@ -128,6 +128,20 @@ export const handleConfigCoach = async msg => {
       // TODO : Send confirm
       return;
     }
+    case `${CCMDDISCR}getDashboard`: {
+      console.log('TODO: Create a method to retrieve a new dashboard');
+      return;
+    }
+    case `${CCMDDISCR}stopCoaching`: {
+      console.log('TODO : Create a method that will finish coaching a student');
+      return;
+    }
+    case `${CCMDDISCR}startCoaching`: {
+      console.log(
+        'TODO : Create a method that will start coaching the student behind the id of rawmsg[1] '
+      );
+      return;
+    }
     default: {
       // TODO: throw bad command at coach
       console.log('bad command');
