@@ -68,7 +68,7 @@ mongoose.connect(mongoDbKey, {
 
         const ticket = DATA_VALIDATION_POOL[msgReact.message.id];
         const group = getActualGroup(msgReact, DATA_VALIDATION_POOL);
-        lockEmojiInterWGroup(group, ticket, msgReact);
+        await lockEmojiInterWGroup(group, ticket, msgReact);
 
         const hasAllEmojies = hasAllProperties(
           DATA_VALIDATION_POOL[msgReact.message.id],
@@ -104,7 +104,7 @@ mongoose.connect(mongoDbKey, {
       case 'DASHBOARD_POOL': {
         const allowedEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '◀', '▶️'];
         if (!allowedEmojis.includes(msgReact.emoji.name)) return badEmoji(msgReact);
-        lockEmojiInter(msgReact, DASHBOARD_POOL[msgReact.message.id]);
+        await lockEmojiInter(msgReact, DASHBOARD_POOL[msgReact.message.id]);
         return;
       }
       default:

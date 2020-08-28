@@ -1,7 +1,7 @@
 /**@typedef EmojisAndMethods
  * @type {Object}
  * @prop {string[]} emojis All emojis belonging to the group
- * @prop {function(import("./ticket").AllTicket_Out, Emoji, MessageReaction): void } onAdd Runs when the group is unlocked
+ * @prop {function(import("./ticket").AllTicket_Out, Emoji, MessageReaction): void | Promise<void> } onAdd Runs when the group is unlocked
  *                        (no other emoji in the group is active),
  *                        and the user reacts with an emoji from this group.
  * @prop {function(import("./ticket").AllTicket_Out, MessageReaction): void} onDel Runs when the user removes a reaction belonging to this group. */
@@ -71,20 +71,25 @@ export const getActualGroup = (msgReact, pool) => {
 
 /** @param {MessageReaction} msgReact
  *  @param {AllTickets}      ticket */
-export const lockEmojiInter = (msgReact, ticket) => {
+export const lockEmojiInter = async (msgReact, ticket) => {
   const actualGroup = getActualGroup(msgReact, ticket.pool);
-  lockEmojiInterWGroup(actualGroup, ticket, msgReact);
+  await lockEmojiInterWGroup(actualGroup, ticket, msgReact);
 };
 
 /**@param {string}          group
  * @param {AllTickets}      ticket
  * @param {MessageReaction} msgReact */
-export const lockEmojiInterWGroup = (group, ticket, msgReact) => {
+export const lockEmojiInterWGroup = async (group, ticket, msgReact) => {
   const emoji = emojiFromMsgReact(msgReact);
   const groupIndex = ticket.lockedEmojiInteractionGroups.indexOf(group);
   if (groupIndex !== -1) return console.error(`Group (${group}) already locked down.`);
   ticket.lockedEmojiInteractionGroups.push(group);
-  emojiInteractions[ticket.pool.name][group].onAdd?.(ticket, emoji, msgReact);
+  if (
+    emojiInteractions[ticket.pool.name][group]?.onAdd[Symbol.toStringTag] ===
+    'AsyncFunction'
+  )
+    await emojiInteractions[ticket.pool.name][group]?.onAdd(ticket, emoji, msgReact);
+  else emojiInteractions[ticket.pool.name][group]?.onAdd(ticket, emoji, msgReact);
 };
 
 /**@param {AllTickets}      ticket
