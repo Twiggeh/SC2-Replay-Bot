@@ -95,7 +95,7 @@ export const handleConfigCoach = async msg => {
   };
 
   // TODO : Buffer this maybe, maybe put into provider.
-  const dbCoach = await getDBCoach(msg.id);
+  const dbCoach = await getDBCoach(msg.channel.recipient.id);
 
   const rawCommand = msg.content.toLowerCase().split(' ');
   switch (rawCommand[0]) {
@@ -146,3 +146,4 @@ import { delAllMsgs, includesAnyArr, getStrUTCDay, includesAny } from './utils.j
 import Coach, { availSchema } from '../Models/Coach.js';
 import { allCoachIds } from '../provider/provider.js';
 import { getDashboards } from './dash.js';
+import { Message } from 'discord.js';
