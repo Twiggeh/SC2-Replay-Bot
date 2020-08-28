@@ -26,6 +26,7 @@
  * @prop {PlayerRank} rank    - Players Rank
  * @prop {PlayerRace} race    - Players Race
  * @prop {EnemyRace}  vsRace  - VsPlayerRank
+ * @prop {number} emojiIdentifier - The emojiIdentifier of the QT_Ticket (The Emoji to use to select a user)
  * @typedef {T_FactoryOptions & QT_Opts} QT_FactoryOptions */
 
 /**@typedef {T_FactoryOptions & QT_FactoryOptions & DVT_FactoryOptions | D_Ticket} AllTicket_FactoryOptions */
@@ -173,7 +174,8 @@ export const ticketFactory = (
     student,
     coach,
     startedCoaching,
-    currentlyCoaching,
+    currentlyCoaching, // TODO : WHAT IS CURRENTLY COACHING
+    emojiIdentifier,
   },
   saveToDB
 ) => {
@@ -226,8 +228,8 @@ export const ticketFactory = (
         vsRace,
         coach,
         student,
-        emojiIdentifier: undefined,
-        startedCoaching: undefined,
+        emojiIdentifier,
+        startedCoaching,
       };
       if (saveToDB) {
         const queuePoolEntry = new Queue_PoolEntry({
@@ -265,12 +267,17 @@ export const ticketFactory = (
  * @param {AllTicket_FactoryOptions} options
  * @param {boolean} [saveToDB=false]
  */
-export const buildTicket = async (pool, options, saveToDB = false) => {
+export const buildTicket = async (
+  pool,
+  options,
+  saveToDB = false,
+  overrideTimeout = false
+) => {
   let ticket;
   if (saveToDB) ticket = await ticketFactory(pool, options, saveToDB);
   else ticket = ticketFactory(pool, options, saveToDB);
 
-  const timeout = getTicketTimeout(pool);
+  const timeout = overrideTimeout === false ? getTicketTimeout(pool) : overrideTimeout;
   addToPool(ticket, pool, timeout);
   return ticket;
 };
