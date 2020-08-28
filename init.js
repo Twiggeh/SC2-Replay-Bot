@@ -11,8 +11,10 @@ export const IS_REPLAY_POOL = createPool('IS_REPLAY_POOL');
 export const DATA_VALIDATION_POOL = createPool('DATA_VALIDATION_POOL');
 /** @type {Object.<string, import('./utils/ticket.js').Q_Ticket>} */
 export const QUEUE_POOL = createPool('QUEUE_POOL');
-/** @type {Object.<string, any>} */
+/** @type {Object.<string, import('./utils/ticket.js').D_Ticket>} */
 export const DASHBOARD_POOL = createPool('DASHBOARD_POOL');
+/** @type {Object.<string, import('./utils/ticket.js').CL_Ticket>} */
+export const COACHLOG_POOL = createPool('COACHLOG_POOL');
 
 // EMOJI INTERACTIONS
 
@@ -60,6 +62,17 @@ registerEmojiInteraction(DASHBOARD_POOL, {
     emojis: ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'],
     onAdd: selectStudent,
     onDel: finishedCoachingStudent,
+  },
+});
+
+registerEmojiInteraction(COACHLOG_POOL, {
+  prevPage: {
+    emojis: ['✅', '🛑'],
+    /** @param {import('./utils/ticket.js').CL_Ticket} CLTicket */
+    onAdd: (CLTicket, emoji, msgReaction) => {
+      // TODO : finish this function
+      console.log(CLTicket, emoji, msgReaction);
+    },
   },
 });
 
@@ -123,9 +136,11 @@ const init = async () => {
 
           if (dashOfCoach) {
             buildTicket(DASHBOARD_POOL, {
+              coachID: qPEntry.coachID,
               id: dashOfCoach.id,
-              currentlyCoaching: qPEntry.id,
+              studentQTicketID: qPEntry.id,
               startedCoaching: qPEntry.startedCoaching,
+              lockedEmojiInteractionGroups: ['selectStudent'],
             });
           }
 

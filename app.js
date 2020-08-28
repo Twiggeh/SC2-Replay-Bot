@@ -12,8 +12,9 @@ mongoose.connect(mongoDbKey, {
 
   client.on('ready', () => console.log('Bot online'));
 
+  /** @param {MessageReaction} msgReact */
   const badEmoji = msgReact =>
-    console.log('User tried to provide wrong emote : ' + msgReact._emoji.name);
+    console.log('User tried to provide wrong emote : ' + emojiFromMsgReact(msgReact));
 
   client.on('messageReactionAdd', async (msgReact, user) => {
     if (user.bot) return;
@@ -102,9 +103,16 @@ mongoose.connect(mongoDbKey, {
         return;
       }
       case 'DASHBOARD_POOL': {
-        const allowedEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '◀', '▶️'];
+        const allowedEmojis = DashEmojis;
         if (!allowedEmojis.includes(msgReact.emoji.name)) return badEmoji(msgReact);
         await lockEmojiInter(msgReact, DASHBOARD_POOL[msgReact.message.id]);
+        return;
+      }
+      case 'COACHLOG_POOL': {
+        const allowedEmojis = ['✅', '🛑'];
+        if (!allowedEmojis.includes(emojiFromMsgReact(msgReact)))
+          return badEmoji(msgReact);
+        await lockEmojiInter(msgReact, COACHLOG_POOL[msgReact.message.id]);
         return;
       }
       default:
@@ -177,9 +185,10 @@ import init, {
   QUEUE_POOL,
   IS_REPLAY_POOL,
   DASHBOARD_POOL,
+  COACHLOG_POOL,
 } from './init.js';
 import mongoose from 'mongoose';
-import Discord from 'discord.js';
+import Discord, { MessageReaction } from 'discord.js';
 import { botKey, mongoDbKey } from './config/keys.js';
 import {
   freeEmojiInter,
@@ -187,6 +196,7 @@ import {
   getActualGroup,
   isLocked,
   lockEmojiInter,
+  emojiFromMsgReact,
 } from './utils/emojiInteraction.js';
 import {
   handleConfirmation,
@@ -205,6 +215,6 @@ import { newInterruptRunner } from './utils/interruptRunner.js';
 import { handleConfigCoach, isCoachCmd } from './utils/coach.js';
 import { isPartOfPool, POOLS } from './utils/pool.js';
 import { DATA_FLOW } from './provider/dataFlow.js';
-import { allEmojis } from './Emojis.js';
+import { allEmojis, DashEmojis } from './Emojis.js';
 import { isNotSC2Replay } from './messages.js';
 import { getCoaches } from './provider/provider.js';

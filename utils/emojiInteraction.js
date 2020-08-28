@@ -52,7 +52,7 @@ export const onAddHelper = (ticket, emoji, assignee, emojiGroup) => {
 };
 
 /** @param {MessageReaction} msgReact @returns {string} Name or ID of the emoji */
-const emojiFromMsgReact = msgReact =>
+export const emojiFromMsgReact = msgReact =>
   msgReact._emoji.id === null ? msgReact._emoji.name : msgReact._emoji.id;
 
 /**@param {Pool} pool
@@ -99,14 +99,18 @@ export const freeEmojiInter = (msgReact, ticket) => {
   freeEmojiInterWGroup(actualGroup, ticket, msgReact);
 };
 
-/**@param {string}     group
+/**
+ * Frees the interaction with an emoji group. If no msgReact is specified it
+ * will skip checking wether all reactions of the group have been removed.
+ * @param {string}     group
  * @param {AllTickets} ticket
- * @param {MessageReaction} msgReact
+ * @param {MessageReaction} [msgReact=false]
  *  */
-export const freeEmojiInterWGroup = (group, ticket, msgReact) => {
+export const freeEmojiInterWGroup = (group, ticket, msgReact = false) => {
   const groupIndex = ticket.lockedEmojiInteractionGroups.indexOf(group);
   if (groupIndex === -1) return console.error(`Group (${group}) is already unlocked.`);
   if (
+    msgReact &&
     includesAnyArr(
       msgReact.message.reactions.cache
         .array()

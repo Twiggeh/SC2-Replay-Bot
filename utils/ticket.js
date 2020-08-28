@@ -72,13 +72,24 @@
 
 /**@typedef {Object} D_Ticket
  * @prop {string} id - ID of the coaches' Dashboard.
- * @prop {string} currentlyCoaching - ID of the QUEUE_POOL entry that is currently being coached.
+ * @prop {string} coachID - The Id of the coach
+ * @prop {Array}  lockedEmojiInteractionGroups - Locked Interactions
+ * @prop {string} studentQTicketID - ID of the QUEUE_POOL entry that is currently being coached.
  * @prop {number} startedCoaching - Date.now() of when the coach started to coach.
  * @prop {number} endedCoaching - Date.now() of the end of the coaching session.
  */
 
+/**@typedef {Object} CL_Ticket
+ * @prop {string} id - ID of the successCoaching Message.
+ * @prop {string} coachID - The Id of the coach
+ * @prop {Array}  lockedEmojiInteractionGroups - Locked Interactions of the CoachLogTicket
+ * @prop {string} studentQTicketID - ID of the QUEUE_POOL entry that is has been coached.
+ * @prop {D_Ticket} dTicket - The Dashboard Ticket of the Coach
+ * @prop {Q_Ticket} qTicket - The QueuePool Ticket of the User
+ */
+
 /**@typedef AllTicket_Out
- * @type { D_Ticket | Ticket_Out | DV_Ticket & T_Out | IR_Ticket & T_Out | Q_Ticket & T_Out} */
+ * @type { CL_Ticket | D_Ticket | Ticket_Out | DV_Ticket & T_Out | IR_Ticket & T_Out | Q_Ticket & T_Out} */
 
 export const timeOutHandler = async (ticket, system) => {
   console.log('timedout');
@@ -150,6 +161,8 @@ export const getTicketTimeout = pool => {
       return 10 * 1000; // TODO : Make longer
     case 'DASHBOARD_POOL':
       return 0;
+    case "COACHLOG_POOL": 
+      return 0;
     default:
       console.error(`Wrong name provided (${pool.name})`);
   }
@@ -159,7 +172,7 @@ export const getTicketTimeout = pool => {
  * @param {AllTicket_FactoryOptions} param1
  * @param {boolean} saveToDB - Whether to save to the database
  * @return { AllTicket_Out | Promise<AllTicket_Out>}*/
-export const ticketFactory = (
+export const ticketFactory = async (
   pool,
   {
     id,
@@ -174,8 +187,12 @@ export const ticketFactory = (
     student,
     coach,
     startedCoaching,
-    currentlyCoaching, // TODO : WHAT IS CURRENTLY COACHING
+    studentQTicketID,
     emojiIdentifier,
+    lockedEmojiInteractionGroups = [],
+    coachID,
+    dTicket,
+    qTicket,
   },
   saveToDB
 ) => {
@@ -243,19 +260,33 @@ export const ticketFactory = (
           studentID: student.id,
           attachArr,
         });
-        return (async () => {
-          await queuePoolEntry.save();
-          return result;
-        })();
+
+        await queuePoolEntry.save();
+        return result;
       }
       return result;
     }
     case 'DASHBOARD_POOL': {
+      if ((!startedCoaching || !studentQTicketID) && id && DASHBOARD_POOL[id])
+        return DASHBOARD_POOL[id];
+
       return {
         id,
-        currentlyCoaching,
+        studentQTicketID,
         startedCoaching,
-        lockedEmojiInteractionGroups: [],
+        lockedEmojiInteractionGroups,
+        coachID,
+      };
+    }
+    case 'COACHLOG_POOL': {
+      /** @type {CL_Ticket}*/
+      return {
+        id,
+        coachID,
+        lockedEmojiInteractionGroups,
+        studentQTicketID,
+        dTicket,
+        qTicket,
       };
     }
     default:
@@ -273,9 +304,7 @@ export const buildTicket = async (
   saveToDB = false,
   overrideTimeout = false
 ) => {
-  let ticket;
-  if (saveToDB) ticket = await ticketFactory(pool, options, saveToDB);
-  else ticket = ticketFactory(pool, options, saveToDB);
+  const ticket = await ticketFactory(pool, options, saveToDB);
 
   const timeout = overrideTimeout === false ? getTicketTimeout(pool) : overrideTimeout;
   addToPool(ticket, pool, timeout);
@@ -370,3 +399,5 @@ import {
 } from '../config/global.js';
 import Queue_PoolEntry from '../Models/Queue_Pool.js';
 import { User } from 'discord.js';
+import { QUEUE_POOL, DASHBOARD_POOL } from '../init.js';
+import Coach from '../Models/Coach.js';

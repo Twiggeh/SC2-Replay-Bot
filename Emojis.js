@@ -137,3 +137,14 @@ export const allEmojis = {
 };
 
 export const DashEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '◀', '▶️'];
+
+export const binaryEmojis = {
+  '✅': {
+    name: 'white_check_mark',
+    id: '✅',
+  },
+  '🛑': {
+    name: 'octagonal_sign',
+    id: '🛑',
+  },
+};
