@@ -59,7 +59,7 @@ export const vsRaceEmojis = {
   },
 };
 
-export const emojiIdentifiers = {
+export const numberIdent = {
   1: {
     id: '1️⃣',
     name: ':one:',
@@ -87,6 +87,34 @@ export const emojiIdentifiers = {
   },
 };
 
+export const emojiIdent = {
+  '1️⃣': {
+    id: 1,
+    name: ':one:',
+    url: 'https://ptb.discordapp.com/assets/68546f5fc3b2166f42cf90b7e23c5ae9.svg',
+  },
+  '2️⃣': {
+    id: 2,
+    name: ':two:',
+    url: 'https://ptb.discordapp.com/assets/eb29ce5fcf54bc3b23ff77039a4ecf3c.svg',
+  },
+  '3️⃣': {
+    id: 3,
+    name: ':three:',
+    url: 'https://ptb.discordapp.com/assets/67f896405747f26f63f09e0cb048d358.svg',
+  },
+  '4️⃣': {
+    id: 4,
+    name: ':four:',
+    url: 'https://ptb.discordapp.com/assets/09fe8a2882cac4cdb4712ab9622d3fe1.svg',
+  },
+  '5️⃣': {
+    id: 5,
+    name: ':five:',
+    url: 'https://ptb.discordapp.com/assets/5575865e2cb3d50ea051b09d7e1d2550.svg',
+  },
+};
+
 export const reqDashEmojis = {
   arrow_backward: {
     name: 'arrow_backward',
@@ -104,7 +132,7 @@ export const allEmojis = {
   ...raceEmojis,
   ...rankEmojis,
   ...vsRaceEmojis,
-  ...emojiIdentifiers,
+  ...numberIdent,
   ...reqDashEmojis,
 };
 

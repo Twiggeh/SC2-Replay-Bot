@@ -134,7 +134,7 @@ export const dashboardMessage = (discordCoach, page = 1, maxEl = 5) => {
     }
 
     /** @type {[RenderData]} */
-    const dataToRender = [];
+    const renderData = [];
     const _QUEUE_POOL_KEYS = Object.keys(_QUEUE_POOL);
 
     for (let Q_ID of _QUEUE_POOL_KEYS) {
@@ -156,10 +156,10 @@ export const dashboardMessage = (discordCoach, page = 1, maxEl = 5) => {
             }`
           : `${minsElapsed.toFixed(2).padStart(4, '0')} mins`
       }`;
-      const ID = emojiIdentifiers[ticket.emojiIdentifier]?.id
-        ? emojiIdentifiers[ticket.emojiIdentifier].id
+      const ID = numberIdent[ticket.emojiIdentifier]?.id
+        ? numberIdent[ticket.emojiIdentifier].id
         : ticket.emojiIdentifier;
-      dataToRender[ticket.emojiIdentifier] = {
+      renderData[ticket.emojiIdentifier] = {
         ID: String(ID),
         name: String(name),
         race: String(race),
@@ -174,7 +174,7 @@ export const dashboardMessage = (discordCoach, page = 1, maxEl = 5) => {
         // if (i === maxEl * page) break;
         longestDataStr[key] = Math.max(
           longestDataStr[key],
-          dataToRender[ticket.emojiIdentifier][key].length
+          renderData[ticket.emojiIdentifier][key].length // TODO cannot read property ID of undefined
         );
         //i++;
       }
@@ -211,9 +211,9 @@ export const dashboardMessage = (discordCoach, page = 1, maxEl = 5) => {
     };
     result += getTableLegend();
 
-    for (let i = 1; i < dataToRender.length; i++) {
+    for (let i = 1; i < renderData.length; i++) {
       const data = [];
-      const row = dataToRender[i];
+      const row = renderData[i];
       if (row === undefined) continue;
       for (let key in row) {
         data.push({ content: row[key], maxLength: longestDataStr[key] });
@@ -248,5 +248,5 @@ ${getCoachAbleStudents()}
 };
 
 import { User as DiscordUser } from 'discord.js';
-import { raceEmojis, vsRaceEmojis, rankEmojis, emojiIdentifiers } from './Emojis.js';
+import { raceEmojis, vsRaceEmojis, rankEmojis, numberIdent } from './Emojis.js';
 import { QUEUE_POOL } from './init.js';
