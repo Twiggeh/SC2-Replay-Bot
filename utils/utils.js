@@ -196,16 +196,20 @@ You can omit this error message by specifying your rank with:
  * @param {string}     url*/
 export const handleMissingData = async (msg, playingAgainst, playingAs, rank, url) => {
   if (playingAgainst && playingAs && rank && url) {
-    await buildTicket(QUEUE_POOL, {
-      id: msg.id,
-      activatedAt: Date.now(),
-      content: msg.content,
-      attachArr: msg.attachArr,
-      race: playingAs,
-      rank,
-      vsRace: playingAgainst,
-      student: msg.author,
-    });
+    await buildTicket(
+      QUEUE_POOL,
+      {
+        id: msg.id,
+        activatedAt: Date.now(),
+        content: msg.content,
+        attachArr: msg.attachArr,
+        race: playingAs,
+        rank,
+        vsRace: playingAgainst,
+        student: msg.author,
+      },
+      true
+    );
     DATA_FLOW[msg.author.id].resolveInd(1);
     console.log('all emojies were received.');
     return;

@@ -99,56 +99,6 @@ export const getDashboards = async coachIDs => {
 // TODO : put into provider;
 export const date = new Date();
 
-// TODO : put into a provider
-let lastSearched;
-/**@type {mongoose.Document[] | mongoose.Document | {}} */
-let allCoaches;
-
-/**
- * Retrieves all DataBaseCoaches that are available based on their
- * timezone configuration, and retrieves their Dashboards. Creates
- * the Dashboard if it cannot find one.
- */
-const getAvailDashboards = async () => {
-  // TODO : put into a provider
-
-  if (lastSearched === undefined || Date.now() - 30 * 60 * 1000 > lastSearched) {
-    lastSearched = Date.now();
-    allCoaches = await Coach.find({});
-    if (!Array.isArray(allCoaches)) allCoaches = [allCoaches];
-  }
-
-  const curDay = getStrUTCDay();
-
-  /**@type {mongoose.Document[] | mongoose.Document | {}} */
-  const availableCoaches = allCoaches.filter(coach => {
-    const { times } = coach.available[curDay];
-    for (let i = 0; i < times.length; i += 2) {
-      const [startH, startMin = 0] = times[i].split(':');
-      const [endH, endMin = 0] = times[i + 1].split(':');
-
-      const rawUTCStartTime = Date.UTC(
-        date.getUTCFullYear(),
-        date.getUTCMonth(),
-        date.getUTCDate(),
-        startH + coach.timeZone,
-        startMin
-      );
-      const rawUTCEndTime = Date.UTC(
-        date.getUTCFullYear(),
-        date.getUTCMonth(),
-        date.getUTCDate(),
-        endH + coach.timeZone,
-        endMin
-      );
-
-      if (rawUTCStartTime < Date.now() && rawUTCEndTime > Date.now()) return true;
-      return false;
-    }
-  });
-  return await getDashboards(availableCoaches.map(coach => coach.id));
-};
-
 /** @param {string[]} coachIds
  * @returns {Message[]}
  */

@@ -78,16 +78,20 @@ mongoose.connect(mongoDbKey, {
           clearTTimeout(ticket);
           ticket.timedOut = false;
           Object.freeze(ticket);
-          await buildTicket(QUEUE_POOL, {
-            id: ticket.id,
-            activatedAt: ticket.activatedAt,
-            content: ticket.content,
-            attachArr: ticket.attachArr,
-            race: ticket.race,
-            rank: ticket.rank,
-            vsRace: ticket.vsRace,
-            student: ticket.origMsg.author,
-          });
+          await buildTicket(
+            QUEUE_POOL,
+            {
+              id: ticket.id,
+              activatedAt: ticket.activatedAt,
+              content: ticket.content,
+              attachArr: ticket.attachArr,
+              race: ticket.race,
+              rank: ticket.rank,
+              vsRace: ticket.vsRace,
+              student: ticket.origMsg.author,
+            },
+            true
+          );
           DATA_FLOW[getRecipId(msgReact)].resolveInd(1);
 
           console.log('all emojies were received.');

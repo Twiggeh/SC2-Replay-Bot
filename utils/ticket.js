@@ -266,9 +266,9 @@ export const ticketFactory = (
  * @param {boolean} [saveToDB=false]
  */
 export const buildTicket = async (pool, options, saveToDB = false) => {
-  const ticket = saveToDB
-    ? await ticketFactory(pool, options, saveToDB)
-    : ticketFactory(pool, options, saveToDB);
+  let ticket;
+  if (saveToDB) ticket = await ticketFactory(pool, options, saveToDB);
+  else ticket = ticketFactory(pool, options, saveToDB);
 
   const timeout = getTicketTimeout(pool);
   addToPool(ticket, pool, timeout);
