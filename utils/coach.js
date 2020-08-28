@@ -95,32 +95,37 @@ export const handleConfigCoach = async msg => {
   };
 
   // TODO : Buffer this maybe, maybe put into provider.
-  const dbCoach = await getDBCoach(msg.channel.recipient.id);
 
   const rawCommand = msg.content.toLowerCase().split(' ');
   switch (rawCommand[0]) {
     case `${CCMDDISCR}setonedaytime`: {
+      const dbCoach = await getDBCoach(msg.channel.recipient.id);
       const day = getDay(rawCommand);
       const times = getTime(rawCommand);
       const ping = getPing(rawCommand);
       dbCoach.available[day].times = times;
       dbCoach.available[day].ping = ping;
+      await dbCoach.save();
       break;
     }
     case `${CCMDDISCR}setglobalping`: {
       const ping = getPing(rawCommand);
+      const dbCoach = await getDBCoach(msg.channel.recipient.id);
       for (let day of Object.keys(dbCoach.available.inspect())) {
         if (day === '_id') continue;
         dbCoach.available[day].ping = ping;
       }
+      await dbCoach.save();
       break;
     }
     case `${CCMDDISCR}setglobaltimes`: {
+      const dbCoach = await getDBCoach(msg.channel.recipient.id);
       const times = getTime(rawCommand);
       for (let day of Object.keys(dbCoach.available.inspect())) {
         if (day === '_id') continue;
         dbCoach.available[day].times = times;
       }
+      await dbCoach.save();
       break;
     }
     case `${CCMDDISCR}deleteallmessages`: {
@@ -128,12 +133,23 @@ export const handleConfigCoach = async msg => {
       // TODO : Send confirm
       return;
     }
-    case `${CCMDDISCR}getDashboard`: {
+    case `${CCMDDISCR}getdashbaord`: {
       console.log('TODO: Create a method to retrieve a new dashboard');
       return;
     }
-    case `${CCMDDISCR}stopCoaching`: {
-      console.log('TODO : Create a method that will finish coaching a student');
+    case `${CCMDDISCR}stopcoaching`: {
+      const dash = await getDashboard(msg.author);
+      if (!dash) return console.log('User did not have the right permissions');
+      const DASHBOARD_POOL_KEYS = Object.keys(DASHBOARD_POOL);
+
+      let coachDashTicket;
+      for (let i = 0; i < DASHBOARD_POOL_KEYS.length; i++) {
+        /** @type {import('./ticket.js').D_Ticket} */
+        const dTicket = DASHBOARD_POOL[DASHBOARD_POOL_KEYS[i]];
+        if (dTicket.coachID === msg.author.id) coachDashTicket = dTicket;
+      }
+
+      freeEmojiInterWGroup('selectStudent', coachDashTicket);
       return;
     }
     case `${CCMDDISCR}startCoaching`: {
@@ -147,7 +163,6 @@ export const handleConfigCoach = async msg => {
       console.log('bad command');
     }
   }
-  await dbCoach.save();
   // TODO : Send configuration dashboard and then delete it after 20s
 };
 
@@ -159,5 +174,7 @@ export const createCoaches = async coachIds => {
 import { delAllMsgs, includesAnyArr, getStrUTCDay, includesAny } from './utils.js';
 import Coach, { availSchema } from '../Models/Coach.js';
 import { allCoachIds } from '../provider/provider.js';
-import { getDashboards } from './dash.js';
+import { getDashboards, getDashboard, finishedCoachingStudent } from './dash.js';
 import { Message } from 'discord.js';
+import { QUEUE_POOL, DASHBOARD_POOL } from '../init.js';
+import { freeEmojiInterWGroup } from './emojiInteraction.js';
