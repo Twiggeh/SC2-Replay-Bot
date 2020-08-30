@@ -136,8 +136,8 @@ export const handleConfigCoach = async msg => {
       // TODO : Send confirm
       return;
     }
-    case `${CCMDDISCR}getdashbaord`: {
-      console.log('TODO: Create a method to retrieve a new dashboard');
+    case `${CCMDDISCR}getdashboard`: {
+      getDashboard(msg.author);
       return;
     }
     case `${CCMDDISCR}stopcoaching`: {
