@@ -6,14 +6,15 @@ const CoachLogEntrySchema = new mongoose.Schema({
   race: String,
   rank: String,
   vsRace: String,
-  StudentName: String,
+  studentName: String,
   studentID: String,
-  CoachName: String,
-  CoachID: String,
+  coachName: String,
+  coachID: String,
   startedCoaching: Number,
   endedCoaching: Number,
   coachRating: { type: Number, max: 10, min: 0, default: 5 },
   studentRating: { type: Number, max: 10, min: 0, default: 5 },
+  success: Boolean,
 });
 
 /**
@@ -26,14 +27,15 @@ const CoachLogEntrySchema = new mongoose.Schema({
  * @prop {string} race - The race of the student
  * @prop {string} rank - The rank of the student
  * @prop {string} vsRace - The race of the opponent
- * @prop {User["username"]} StudentName - The Discord.User.username of the coach
+ * @prop {User["username"]} studentName - The Discord.User.username of the coach
  * @prop {User["id"]} studentID - Id of the student
- * @prop {User["username"]} CoachName - The Discord.User.username of the coach
- * @prop {User["id"]} CoachID - The Discord.User.Id of the coach
+ * @prop {User["username"]} coachName - The Discord.User.username of the coach
+ * @prop {User["id"]} coachID - The Discord.User.Id of the coach
  * @prop {number} startedCoaching - Date.now() of when the student has started to be coached.
  * @prop {number} endedCoaching - Date.now() of when the coaching session has ended.
  * @prop {number} coachRating - Number from 0 - 10, that rates the coach.
  * @prop {number} studentRating - Number from 0 - 10, that rates the student.
+ * @prop {boolean} success - If the student wanted to be coached by someone else
  */
 
 /**
