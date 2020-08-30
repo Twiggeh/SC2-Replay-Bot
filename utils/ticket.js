@@ -34,7 +34,6 @@
 /**@typedef {Object} Ticket
  * @prop {string}  id        - Message ID
  * @prop {string}  url       - Url of the first detected replay
-
  * @prop {boolean} emergency - If this ticket has been neglected for too long.
  * @prop {string}  activatedAt      - The time at which the ticket got created
  * @prop {Message["attachments"]} attachArr - Array with all the Attachments of the orig msg */
@@ -64,6 +63,7 @@
  * @prop {PlayerRank} rank     - Players Rank
  * @prop {PlayerRace} race     - Players Race
  * @prop {PlayerRace} vsRace   - VsPlayerRank
+ * @prop {string} content - The content of the Student's Message
  * @prop {User} coach   - Coach that has taken on the role of coaching the user
  * @prop {User} student - Student that has Requested the coaching
  * @prop {number} emojiIdentifier - EmojiNumber that is going to allow the coach to pull the user.
@@ -161,7 +161,7 @@ export const getTicketTimeout = pool => {
       return 10 * 1000; // TODO : Make longer
     case 'DASHBOARD_POOL':
       return 0;
-    case "COACHLOG_POOL": 
+    case 'COACHLOG_POOL':
       return 0;
     default:
       console.error(`Wrong name provided (${pool.name})`);
@@ -231,8 +231,10 @@ export const ticketFactory = async (
         attachArr,
       };
     case 'QUEUE_POOL': {
+      /** @type {Q_Ticket} */
       const result = {
         id,
+        url,
         activatedAt,
         timedOut: false,
         timeOutId: undefined,
@@ -258,15 +260,16 @@ export const ticketFactory = async (
           vsRace,
           coachID: coach?.id,
           studentID: student.id,
+          url,
           attachArr,
+          startedCoaching,
         });
-
-        await queuePoolEntry.save();
-        return result;
+        queuePoolEntry.save();
       }
       return result;
     }
     case 'DASHBOARD_POOL': {
+      if (!startedCoaching || !studentQTicketID) console.log('break');
       if ((!startedCoaching || !studentQTicketID) && id && DASHBOARD_POOL[id])
         return DASHBOARD_POOL[id];
 
@@ -399,5 +402,4 @@ import {
 } from '../config/global.js';
 import Queue_PoolEntry from '../Models/Queue_Pool.js';
 import { User } from 'discord.js';
-import { QUEUE_POOL, DASHBOARD_POOL } from '../init.js';
-import Coach from '../Models/Coach.js';
+import { DASHBOARD_POOL } from '../init.js';
