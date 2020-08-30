@@ -14,7 +14,7 @@ export const shouldHandleMsg = msg => {
 
 /**
  * Delete all normal messages. If force is specified will also remove Dashboards
- * @param {{UserIDs: string[] | string, DMChannels: DMChannel[] | DMChannel}} input
+ * @param {{UserIDs: string[] | string, DMChannels: DMChannel[] | DMChannel}} arg0
  * @param {boolean} force - Delete EVERY message from the bot, even the Dashboards
  */
 export const delAllMsgs = async ({ UserIDs, DMChannels }, force = false) => {
@@ -207,6 +207,7 @@ export const handleMissingData = async (msg, playingAgainst, playingAs, rank, ur
         rank,
         vsRace: playingAgainst,
         student: msg.author,
+        url,
       },
       true
     );
@@ -232,7 +233,7 @@ export const handleMissingData = async (msg, playingAgainst, playingAs, rank, ur
 
 // TODO : Replace with real Coach provider
 
-const coachIds = ['145856913014259712'];
+const coachIds = ['145856913014259712', '177517201023172609'];
 
 /**@param {DV_Ticket} ticket
  * @return {Promise<void>} */
@@ -320,6 +321,10 @@ export const filterNum = str => {
     .join('');
 };
 
+/** @param {MessageReaction} msgReact */
+export const badEmoji = msgReact =>
+  console.log('User tried to provide wrong emote : ' + emojiFromMsgReact(msgReact));
+
 import { updateAllDashboards, date } from './dash.js';
 import {
   confirmIsReplayMsg,
@@ -327,7 +332,7 @@ import {
   missingDataError,
   isSC2Replay,
 } from '../messages.js';
-import { User, Message } from 'discord.js';
+import { User, Message, DMChannel } from 'discord.js';
 import { client } from '../app.js';
 import { DATA_FLOW } from '../provider/dataFlow.js';
 import { buildTicket } from './ticket.js';
@@ -347,3 +352,4 @@ import {
   dRankCuts,
 } from '../config/global.js';
 import { delFromAllPools, updateQueuePool } from './pool.js';
+import { emojiFromMsgReact } from './emojiInteraction.js';

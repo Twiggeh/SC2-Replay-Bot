@@ -12,10 +12,6 @@ mongoose.connect(mongoDbKey, {
 
   client.on('ready', () => console.log('Bot online'));
 
-  /** @param {MessageReaction} msgReact */
-  const badEmoji = msgReact =>
-    console.log('User tried to provide wrong emote : ' + emojiFromMsgReact(msgReact));
-
   client.on('messageReactionAdd', async (msgReact, user) => {
     if (user.bot) return;
     // TODO : Implement filter, right now all messages that are reacted to get pushed through here
@@ -90,6 +86,7 @@ mongoose.connect(mongoDbKey, {
               rank: ticket.rank,
               vsRace: ticket.vsRace,
               student: ticket.origMsg.author,
+              url: ticket.url,
             },
             true
           );
@@ -133,7 +130,7 @@ mongoose.connect(mongoDbKey, {
     }
     switch (msgInPool) {
       case 'DATA_VALIDATION_POOL': {
-        freeEmojiInter(msgReact, DATA_VALIDATION_POOL[msgReact.message.id]);
+        await freeEmojiInter(msgReact, DATA_VALIDATION_POOL[msgReact.message.id]);
         return;
       }
       case 'DASHBOARD_POOL': {
@@ -141,7 +138,7 @@ mongoose.connect(mongoDbKey, {
         if (!allowedEmojis.includes(msgReact.emoji.name)) {
           return badEmoji(msgReact);
         }
-        freeEmojiInter(msgReact, DASHBOARD_POOL[msgReact.message.id]);
+        await freeEmojiInter(msgReact, DASHBOARD_POOL[msgReact.message.id]);
         return;
       }
       default:
@@ -209,6 +206,7 @@ import {
   hasAllProperties,
   delAllMsgs,
   sleep,
+  badEmoji,
 } from './utils/utils.js';
 import { whichDataPresent, getMsgAttachments, buildTicket } from './utils/ticket.js';
 import { newInterruptRunner } from './utils/interruptRunner.js';
