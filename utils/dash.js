@@ -61,7 +61,7 @@ const updateDashboards = async discordCoaches => {
 
 export const updateAllDashboards = async () => {
   // TODO PUT INTO A PROVIDER
-  const allCoaches = ['145856913014259712'];
+  const allCoaches = ['145856913014259712', '177517201023172609'];
   const cache = [];
 
   allCoaches.forEach(id => cache.push(client.users.fetch(id)));
@@ -106,7 +106,7 @@ export const putAllReactsOnDash = async dash => {
   dash = await dash.fetch(true);
   const actions = [];
   let missing = false;
-  let anyCoachReacts = false;
+
   const check = emojiObj => {
     for (const emojiName in emojiObj) {
       // TODO : Needs to only exist for the Bot user, if the
@@ -121,11 +121,6 @@ export const putAllReactsOnDash = async dash => {
   check(numberIdent);
   check(reqDashEmojis);
   if (!missing) return;
-
-  if (anyCoachReacts) {
-    await dash.delete();
-    dash = await getDashboard(dash.channel.recipient);
-  }
 
   for (let i = 0; i < actions.length; i++) {
     await actions[i]();
@@ -210,32 +205,33 @@ export const selectStudent = async (dashTicket, emoji, msgReact) => {
     index += (QUEUE_POOL[QUEUE_KEYS[i]].emojiIdentifier === numIdent) * (i + 1);
   }
   /** @type {import('./ticket.js').Q_Ticket} */
-  const quTicket = QUEUE_POOL[QUEUE_KEYS[index]];
+  const qTicket = QUEUE_POOL[QUEUE_KEYS[index]];
 
-  if (!quTicket)
+  if (!qTicket)
     return console.log("Coach tried to select a emoji that doesn't have a student on it");
   // don't allow other coaches to select this student
-  if (quTicket.coach) return console.log('Already being coached');
+  if (qTicket.coach) return console.log('Already being coached');
 
   // Mark the student as being coached
-  quTicket.coach = msgReact.message.channel.recipient;
-  quTicket.startedCoaching = Date.now();
+  qTicket.coach = msgReact.message.channel.recipient;
+  qTicket.startedCoaching = Date.now();
 
-  // TODO : Send the Url, the userId and the original message to the coach.
-  // TODO : After coaching remove these messages.
-
-  // Update QUEUE_POOL's ids
   updateQueuePool();
 
-  /** @type {import('../Models/Queue_Pool.js').QPE_Opts} */
-  const queuePoolEntry = await Queue_PoolEntry.findOne({ id: quTicket.id });
+  /** @type {[{value: import('../Models/Queue_Pool.js').QPE_Opts}, {value: Message}]} */
+  const result = await Promise.allSettled([
+    Queue_PoolEntry.findOne({ id: qTicket.id }),
+    qTicket.coach.send(studentMessage(qTicket)),
+    updateAllDashboards(),
+  ]);
+
+  const [{ value: queuePoolEntry }] = result;
+
   queuePoolEntry.coachID = msgReact.message.channel.recipient.id;
   queuePoolEntry.startedCoaching = Date.now();
   await queuePoolEntry.save();
 
-  // Refresh all dashboards
-  await updateAllDashboards();
-
+  // TODO : Check whether updateAllDashboards calls the database
   console.log('Selected student');
 };
 
@@ -244,10 +240,15 @@ export const selectStudent = async (dashTicket, emoji, msgReact) => {
  * @param {import('./ticket.js').D_Ticket} dTicket
  */
 export const finishedCoachingStudent = async (dTicket, msgReact) => {
-  // Ask user whether coaching has succeeded.
   /** @type {import('./ticket.js').Q_Ticket} */
-  const qTicket = QUEUE_POOL[dTicket.studentQTicketID]; // TODO : dTicket.studentQTicketID is still undefined
+  const qTicket = QUEUE_POOL[dTicket.studentQTicketID];
+  if (!qTicket?.student) return console.log('No student to uncoach');
+
+  // Ask user whether coaching has succeeded.
   const answer = await qTicket.student.send(successfulCoaching);
+  await answer.react('✅');
+  await answer.react('🛑');
+
   /** @type {import('./ticket.js').CL_Ticket} */
   const options = {
     id: answer.id,
@@ -256,26 +257,23 @@ export const finishedCoachingStudent = async (dTicket, msgReact) => {
     qTicket,
     studentQTicketID: dTicket.studentQTicketID,
   };
-  await buildTicket(COACHLOG_POOL, options);
+  buildTicket(COACHLOG_POOL, options);
 
-  // If yes, save to the database
+  /** @type {import('../Models/Queue_Pool.js').QPE_Opts} */
+  const qPoolEntry = await Queue_PoolEntry.findOne({ id: qTicket.id });
+  qPoolEntry.coachID = undefined;
+  await qPoolEntry.save();
 
-  // if no, remove elements from queue_pool and reload queue_pool and the dashboards of the coaches
+  delAllMsgs({ DMChannels: qTicket.student.dmChannel });
 
-  // free the coaches dashboard
-  // dTicket.studentQTicketID = undefined;
-  // dTicket.startedCoaching = undefined;
-  // dTicket.lockedEmojiInteractionGroups = [];
-  // TODO : Free up the student's QUEUE_TICKET if he was satisfied, if not reset it.
   console.log('Finished Coaching');
 };
 
-import { dashboardMessage, successfulCoaching } from '../messages.js';
+import { dashboardMessage, successfulCoaching, studentMessage } from '../messages.js';
 import { getDBCoach } from './coach.js';
 import { client } from '../app.js';
 import { numberIdent, emojiIdent, reqDashEmojis } from '../Emojis.js';
-import Coach from '../Models/Coach.js';
-import { getStrUTCDay, filterNum } from './utils.js';
+import { delAllMsgs, filterNum } from './utils.js';
 import { Message, User as DiscordUser } from 'discord.js';
 import { DASHBOARD_POOL, QUEUE_POOL, COACHLOG_POOL } from '../init.js';
 import { buildTicket } from './ticket.js';
