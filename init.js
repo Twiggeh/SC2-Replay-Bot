@@ -87,6 +87,7 @@ registerEmojiInteraction(COACHLOG_POOL, {
         content: qTicket.content,
       };
       // TODO : ratings for coach and student
+      // TODO : wrap this into an interrupt runner.
       switch (emoji) {
         case '✅': {
           clTOpts.success = true;
@@ -140,91 +141,155 @@ registerEmojiInteraction(COACHLOG_POOL, {
 
 const init = async () => {
   // LOAD COACHES
-  const initCache = [createCoaches(allCoachIds), Queue_PoolEntry.find({})];
+  const initCache = [getDashboards(allCoachIds), Queue_PoolEntry.find({})];
 
   /** @type {[{value: Message[]}, {value: import('./Models/Queue_Pool.js').QPE_Opts[]}]} */
-  const [{ value: dashboards }, { value: allQueueEntries }] = await Promise.allSettled(
-    initCache
-  );
-
+  const [resMessages, { value: allQueueEntries }] = await Promise.allSettled(initCache);
+  const { value: dashboards } = resMessages;
   const qPEntries = [...allQueueEntries];
 
-  const ticketCache = [];
+  const userFetchCache = [];
+
   dashboards.forEach(dash => {
-    ticketCache.push(
-      (async () => {
-        let recreateDash = 0;
-        const foundEmoji = [];
-
-        recreateDash |= !dash.reactions.cache.every(react => {
-          foundEmoji.push(
-            DashEmojis.includes(react.emoji.name) | DashEmojis.includes(react.emoji.name)
-          );
-          return react.count === 1;
-        });
-        recreateDash |=
-          foundEmoji.length !== 7 || !foundEmoji.reduce((acc, cur) => acc & cur);
-        // TODO : derive 44 from the actual message with the message methods
-        recreateDash |= qPEntries.length === 0 && dash.content.includes('|', 44);
-
-        // DEVELOPER MODE HELPERS
-        //if (recreateDash) {
-        // await dashboard.delete();
-        // await getDashboard(dashboard.channel.recipient);
-
-        //}
-        if (foundEmoji.length !== 7) {
-          ticketCache.push(putAllReactsOnDash(dash));
-        }
-
-        if (qPEntries.length === 0) return [undefined];
-
-        qPEntries.forEach(qPEntry => {
-          const dashOfCoach = dashboards.find(
-            /** @param {Message} dash */
-            dash => dash.channel.recipient.id === qPEntry.coachID
-          );
-
-          /** @type {import('./utils/ticket.js').Q_Ticket} */
-          const options = {
-            student: dash.channel.recipient,
-            id: qPEntry.id,
-            activatedAt: qPEntry.activatedAt,
-            content: qPEntry.content,
-            attachArr: qPEntry.attachArr,
-            race: qPEntry.race,
-            rank: qPEntry.rank,
-            vsRace: qPEntry.vsRace,
-            coach: dashOfCoach?.channel?.recipient,
-            emergency: Date.now() - qPEntry.activatedAt > MAX_TIMEOUT_QUEUE_POOL,
-            url: qPEntry.url,
-            startedCoaching: qPEntry.startedCoaching,
-          };
-
-          console.log(dashOfCoach);
-
-          if (dashOfCoach) {
-            buildTicket(DASHBOARD_POOL, {
-              coachID: qPEntry.coachID,
-              id: dashOfCoach.id,
-              studentQTicketID: qPEntry.id,
-              startedCoaching: qPEntry.startedCoaching,
-              lockedEmojiInteractionGroups: ['selectStudent'],
-            });
-          }
-
-          buildTicket(
-            QUEUE_POOL,
-            options,
-            false,
-            Math.max(10, getTicketTimeout(QUEUE_POOL) - Date.now() + options.activatedAt)
-          );
-        });
-      })()
+    // find out if have to recreate dashboard
+    const foundEmoji = [];
+    dash.reactions.cache.every(react => {
+      foundEmoji.push(
+        DashEmojis.includes(react.emoji.name) | DashEmojis.includes(react.emoji.name)
+      );
+      return react.count === 1;
+    });
+    if (foundEmoji.length !== 7) {
+      userFetchCache.push(putAllReactsOnDash(dash));
+    }
+    // find queuepool ticket that is connected to dashboard
+    const studentTicket = qPEntries.find(
+      entry => entry.coachID === dash.channel.recipient.id
     );
+
+    // build a dashboardTicket with the queuepool if applicable
+    buildTicket(DASHBOARD_POOL, {
+      id: dash.id,
+      coachID: studentTicket?.coachID,
+      studentQTicketID: studentTicket?.id,
+      startedCoaching: studentTicket?.startedCoaching,
+      lockedEmojiInteractionGroups: studentTicket ? ['selectStudent'] : [],
+    });
+
+    // if there are no queuepool entries return => if looping is too slow the loop can happen after
+    // if (qPEntries.length === 0) return;
   });
 
-  await Promise.allSettled(ticketCache);
+  // each queuepool
+  qPEntries.forEach(qPEntry =>
+    userFetchCache.push(
+      (async () => {
+        // find the dashboard? that is connected to a queuePoolEntry
+        const dashOfCoach = dashboards.find(
+          /** @param {Message} dash */
+          dash => dash.channel.recipient.id === qPEntry.coachID
+        );
+
+        // build queuepool ticket with dashboards id if applicable
+        /** @type {import('./utils/ticket.js').Q_Ticket} */
+        const options = {
+          student: await new Discord.User(client, { id: qPEntry.studentID }).fetch(),
+          id: qPEntry.id,
+          activatedAt: qPEntry.activatedAt,
+          content: qPEntry.content,
+          attachArr: qPEntry.attachArr,
+          race: qPEntry.race,
+          rank: qPEntry.rank,
+          vsRace: qPEntry.vsRace,
+          coach: dashOfCoach?.channel?.recipient,
+          emergency: Date.now() - qPEntry.activatedAt > MAX_TIMEOUT_QUEUE_POOL,
+          url: qPEntry.url,
+          startedCoaching: qPEntry.startedCoaching,
+        };
+
+        buildTicket(
+          QUEUE_POOL,
+          options,
+          false,
+          Math.max(10, getTicketTimeout(QUEUE_POOL) - Date.now() + options.activatedAt)
+        );
+      })()
+    )
+  );
+
+  //  dashboards.forEach(dash => {
+  //    ticketCache.push(
+  //      (async () => {
+  //        let recreateDash = 0;
+  //        const foundEmoji = [];
+  //
+  //        recreateDash |= !dash.reactions.cache.every(react => {
+  //          foundEmoji.push(
+  //            DashEmojis.includes(react.emoji.name) | DashEmojis.includes(react.emoji.name)
+  //          );
+  //          return react.count === 1;
+  //        });
+  //        recreateDash |=
+  //          foundEmoji.length !== 7 || !foundEmoji.reduce((acc, cur) => acc & cur);
+  //        // TODO : derive 44 from the actual message with the message methods
+  //        recreateDash |= qPEntries.length === 0 && dash.content.includes('|', 44);
+  //
+  //        // DEVELOPER MODE HELPERS
+  //        //if (recreateDash) {
+  //        // await dashboard.delete();
+  //        // await getDashboard(dashboard.channel.recipient);
+  //
+  //        //}
+  //        if (foundEmoji.length !== 7) {
+  //          ticketCache.push(putAllReactsOnDash(dash));
+  //        }
+  //
+  //        if (qPEntries.length === 0) return [undefined];
+  //
+  //        qPEntries.forEach(qPEntry => {
+  //          const dashOfCoach = dashboards.find(
+  //            /** @param {Message} dash */
+  //            dash => dash.channel.recipient.id === qPEntry.coachID
+  //          );
+  //
+  //          /** @type {import('./utils/ticket.js').Q_Ticket} */
+  //          const options = {
+  //            student: dash.channel.recipient,
+  //            id: qPEntry.id,
+  //            activatedAt: qPEntry.activatedAt,
+  //            content: qPEntry.content,
+  //            attachArr: qPEntry.attachArr,
+  //            race: qPEntry.race,
+  //            rank: qPEntry.rank,
+  //            vsRace: qPEntry.vsRace,
+  //            coach: dashOfCoach?.channel?.recipient,
+  //            emergency: Date.now() - qPEntry.activatedAt > MAX_TIMEOUT_QUEUE_POOL,
+  //            url: qPEntry.url,
+  //            startedCoaching: qPEntry.startedCoaching,
+  //          };
+  //
+  //          console.log(dashOfCoach);
+  //
+  //          buildTicket(DASHBOARD_POOL, {
+  //            coachID: qPEntry.coachID,
+  //            id: dashOfCoach.id,
+  //            studentQTicketID: qPEntry.id,
+  //            startedCoaching: qPEntry.startedCoaching,
+  //            lockedEmojiInteractionGroups: ['selectStudent'],
+  //          });
+  //
+  //          buildTicket(
+  //            QUEUE_POOL,
+  //            options,
+  //            false,
+  //            Math.max(10, getTicketTimeout(QUEUE_POOL) - Date.now() + options.activatedAt)
+  //          );
+  //        });
+  //      })()
+  //    );
+  //  });
+  //
+  await Promise.allSettled(userFetchCache);
   updateQueuePool();
   await updateAllDashboards();
 };
@@ -240,13 +305,15 @@ import {
   getDashboard,
   updateAllDashboards,
   putAllReactsOnDash,
+  getDashboards,
 } from './utils/dash.js';
 import { createCoaches } from './utils/coach.js';
 import { getTicketTimeout, buildTicket } from './utils/ticket.js';
 import Queue_PoolEntry from './Models/Queue_Pool.js';
-import { Message } from 'discord.js';
+import Discord, { Message } from 'discord.js';
 import { badEmoji, sleep, delAllMsgs } from './utils/utils.js';
 import CoachLogEntry from './Models/CoachLog.js';
 import { thankYou, queueRecycle } from './messages.js';
+import { client } from './app.js';
 
 export default init;
