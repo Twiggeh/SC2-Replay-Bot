@@ -255,6 +255,42 @@ If everything was to your liking then you can react with ✅.
 If there was a lot of useful information, that you think could help other people you could make a small writeup and submit it to our replay channel!`,
 };
 
-import { User as DiscordUser } from 'discord.js';
+/**
+ * @param {import('./utils/ticket.js').Q_Ticket} qTicket - QUEUE_POOL Ticket
+ */
+export const studentMessage = qTicket => {
+  /** @type {MessageOptions} */
+  const opts = {
+    content: `**Student :** \`${qTicket.student.tag}\`
+**Message :** ${qTicket.content}`,
+    files: [qTicket.url],
+  };
+  return opts;
+};
+
+/**
+ * @param {MessageReaction} msgReact
+ */
+export const thankYou = msgReact => {
+  return {
+    content: `**Thank you, ${msgReact.message.channel.recipient.tag}!**
+
+Have a wonderful day :D`,
+  };
+};
+
+/**
+ * @param {import('./Models/CoachLog.js').CL_Opts} clTicketOpts
+ */
+export const queueRecycle = clTicketOpts => {
+  return {
+    content: `**Your request for coaching, ${clTicketOpts.studentName}, has been forwarded again to our wonderful coaches.
+(${clTicketOpts.race} ${clTicketOpts.vsRace}, ${clTicketOpts.rank})
+
+Have a wonderful day :D`,
+  };
+};
+
+import { User as DiscordUser, MessageReaction } from 'discord.js';
 import { raceEmojis, vsRaceEmojis, rankEmojis, numberIdent } from './Emojis.js';
 import { QUEUE_POOL } from './init.js';
