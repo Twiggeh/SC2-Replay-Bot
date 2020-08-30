@@ -94,9 +94,9 @@ export const lockEmojiInterWGroup = async (group, ticket, msgReact) => {
 
 /**@param {AllTickets}      ticket
  * @param {MessageReaction} msgReact */
-export const freeEmojiInter = (msgReact, ticket) => {
+export const freeEmojiInter = async (msgReact, ticket) => {
   const actualGroup = getActualGroup(msgReact, ticket.pool);
-  freeEmojiInterWGroup(actualGroup, ticket, msgReact);
+  await freeEmojiInterWGroup(actualGroup, ticket, msgReact);
 };
 
 /**
@@ -106,7 +106,7 @@ export const freeEmojiInter = (msgReact, ticket) => {
  * @param {AllTickets} ticket
  * @param {MessageReaction} [msgReact=false]
  *  */
-export const freeEmojiInterWGroup = (group, ticket, msgReact = false) => {
+export const freeEmojiInterWGroup = async (group, ticket, msgReact = false) => {
   const groupIndex = ticket.lockedEmojiInteractionGroups.indexOf(group);
   if (groupIndex === -1) return console.error(`Group (${group}) is already unlocked.`);
   if (
@@ -121,7 +121,8 @@ export const freeEmojiInterWGroup = (group, ticket, msgReact = false) => {
   )
     return;
   ticket.lockedEmojiInteractionGroups.splice(groupIndex, 1);
-  emojiInteractions[ticket.pool.name][group].onDel?.(ticket, msgReact);
+  // TODO : fix type
+  await emojiInteractions[ticket.pool.name][group].onDel?.(ticket, msgReact);
 };
 
 /**@param {MessageReaction} msgReact
