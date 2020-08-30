@@ -33,8 +33,31 @@ export const getDashboard = async discordCoach => {
     await coach.save();
   }
 
-  buildTicket(DASHBOARD_POOL, { id: dashboard.id, coachID: discordCoach.id });
+  let existingDash;
+  const DASHBOARD_POOL_KEYS = Object.keys(DASHBOARD_POOL);
+  for (const key of DASHBOARD_POOL_KEYS) {
+    const existingDashes = DASHBOARD_POOL[key];
+    if (existingDashes.coachID === dashboard.channel.recipient.id) {
+      existingDash = existingDashes;
+      break;
+    }
+  }
 
+  /** @type {import('./ticket.js').D_Ticket} */
+  const opts = {
+    id: dashboard.id,
+    coachID: discordCoach.id,
+    lockedEmojiInteractionGroups: existingDash?.lockedEmojiInteractionGroups,
+    endedCoaching: existingDash?.endedCoaching,
+    studentQTicketID: existingDash?.studentQTicketID,
+    startedCoaching: existingDash?.startedCoaching,
+  };
+
+  if (existingDash && existingDash?.id !== dashboard.id) {
+    delete DASHBOARD_POOL[existingDash.id];
+  }
+  await buildTicket(DASHBOARD_POOL, opts);
+  console.log(QUEUE_POOL);
   return dashboard;
 };
 
@@ -189,9 +212,11 @@ export const goToPrevPage = (dashTicket, emoji, msgReact) => {
 
 /**
  * @type {import('./emojiInteraction.js').EmojisAndMethods["onAdd"]}
- * @param {import('./ticket.js').D_Ticket} dashTicket
+ * @param {import('./ticket.js').D_Ticket} dashT
  */
-export const selectStudent = async (dashTicket, emoji, msgReact) => {
+export const selectStudent = async (dashT, emoji, msgReact) => {
+  if (dashT.studentQTicketID)
+    return console.log('Cannot coach more than one student at once');
   // TODO:
   // Wait for at least 2 mins => if aborted, ask if was an actual coaching attempt.
   // |=> If yes fast forward to asking the coach and student about the experience. Collect data
@@ -217,6 +242,11 @@ export const selectStudent = async (dashTicket, emoji, msgReact) => {
   qTicket.startedCoaching = Date.now();
 
   updateQueuePool();
+
+  // Mark the dashboard as coaching
+  dashT.startedCoaching = Date.now();
+  dashT.lockedEmojiInteractionGroups = ['selectStudent'];
+  dashT.studentQTicketID = qTicket.id;
 
   /** @type {[{value: import('../Models/Queue_Pool.js').QPE_Opts}, {value: Message}]} */
   const result = await Promise.allSettled([
@@ -263,6 +293,7 @@ export const finishedCoachingStudent = async (dTicket, msgReact) => {
   const qPoolEntry = await Queue_PoolEntry.findOne({ id: qTicket.id });
   qPoolEntry.coachID = undefined;
   await qPoolEntry.save();
+  await sleep(5000);
 
   delAllMsgs({ DMChannels: qTicket.student.dmChannel });
 
@@ -273,7 +304,7 @@ import { dashboardMessage, successfulCoaching, studentMessage } from '../message
 import { getDBCoach } from './coach.js';
 import { client } from '../app.js';
 import { numberIdent, emojiIdent, reqDashEmojis } from '../Emojis.js';
-import { delAllMsgs, filterNum } from './utils.js';
+import { delAllMsgs, filterNum, sleep } from './utils.js';
 import { Message, User as DiscordUser } from 'discord.js';
 import { DASHBOARD_POOL, QUEUE_POOL, COACHLOG_POOL } from '../init.js';
 import { buildTicket } from './ticket.js';
