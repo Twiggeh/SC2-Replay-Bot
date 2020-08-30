@@ -28,18 +28,21 @@ export const getDBCoach = async id => {
 
 /**@param {Message} msg */
 export const isCoachCmd = msg => {
-  if (msg.author.bot) return false;
-  if (msg.channel.type !== 'dm') return false;
+  let result = 1;
+  result &= !msg.author.bot;
+  result &= !(msg.channel.type !== 'dm');
+
   const userRoles = msg.client.guilds.cache.array()[0].members.cache.get(msg.author.id)
     ._roles;
   // TODO : remove webdev
   const isCoach =
-    includesAnyArr(userRoles, allCoachIds) | includesAny('598891772499984394', userRoles);
+    includesAnyArr(userRoles, allCoachIds) |
+    includesAnyArr('598891772499984394', userRoles);
+  result &= isCoach;
   const hasRunner = msg.content.charAt(0) === CCMDDISCR;
+  result &= hasRunner;
 
-  if (isCoach && hasRunner) return true;
-
-  return false;
+  return result;
 };
 
 /**@param {Message} msg */
@@ -149,7 +152,7 @@ export const handleConfigCoach = async msg => {
         if (dTicket.coachID === msg.author.id) coachDashTicket = dTicket;
       }
 
-      freeEmojiInterWGroup('selectStudent', coachDashTicket);
+      await freeEmojiInterWGroup('selectStudent', coachDashTicket);
       return;
     }
     case `${CCMDDISCR}startCoaching`: {
