@@ -1,3 +1,4 @@
+// TODO : maybe make traces of message ids that will then be removed
 export const client = new Discord.Client();
 
 client.login(botKey);
@@ -48,8 +49,7 @@ mongoose.connect(mongoDbKey, {
             // TODO : Put this (await ticket.origMsg.delete();) in after the message has been verified that all data is on it.
             // await ticket.origMsg.delete();
             DATA_FLOW[getRecipId(msgReact)].resolveInd(0);
-            delete IS_REPLAY_POOL[msgReact.message.id];
-            return;
+            break;
           }
           case '🛑': {
             const ticket = IS_REPLAY_POOL[msgReact.message.id];
@@ -58,12 +58,13 @@ mongoose.connect(mongoDbKey, {
             await msgReact.message.channel.send(isNotSC2Replay);
             await sleep(10 * 1000);
             await delAllMsgs({ DMChannels: msgReact.message.channel });
-            delete IS_REPLAY_POOL[msgReact.message.id];
-            return;
+            break;
           }
           default:
             return badEmoji(msgReact);
         }
+        delete IS_REPLAY_POOL[msgReact.message.id];
+        return;
       }
       case 'DATA_VALIDATION_POOL': {
         // TODO : add the functionality to extend timeouts to handleTimeout
@@ -121,6 +122,7 @@ mongoose.connect(mongoDbKey, {
         const allowedEmojis = ['✅', '🛑'];
         if (!allowedEmojis.includes(emojiFromMsgReact(msgReact)))
           return badEmoji(msgReact);
+        clearTTimeout(COACHLOG_POOL[msgReact.message.id]);
         await lockEmojiInter(msgReact, COACHLOG_POOL[msgReact.message.id]);
         return;
       }
@@ -170,16 +172,17 @@ mongoose.connect(mongoDbKey, {
     const { playingAgainst, playingAs, rank, replay } = whichDataPresent(msg);
     if (!hasReplay) return;
     try {
+      // TODO : aborted should be set to false after timing out any of these handlers but it isn't for handleMissingData
       const aborted = await newInterruptRunner({
         dataFlowId: msg.author.id,
         actions: [
           () => handleConfIsReplay(replay, msg, url),
           () => handleMissingData(msg, playingAgainst, playingAs, rank, url),
+          () => handleConfirmation(msg),
         ],
       });
       if (aborted) return;
       await handlePushToCoaches();
-      await handleConfirmation(msg);
     } catch (e) {
       console.error(new Error(e));
     }
