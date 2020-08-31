@@ -288,15 +288,17 @@ export const finishedCoachingStudent = async (dTicket, msgReact) => {
     qTicket,
     studentQTicketID: dTicket.studentQTicketID,
   };
-  buildTicket(COACHLOG_POOL, options);
+  await buildTicket(COACHLOG_POOL, options);
 
+  // Unset the coach in dbQueue, the coach in QUEUE_POOL will be unset after the logging is complete
+  // AKA when the student clicks on the check / the octagonal sign to finish the session.
   /** @type {import('../Models/Queue_Pool.js').QPE_Opts} */
   const qPoolEntry = await Queue_PoolEntry.findOne({ id: qTicket.id });
   qPoolEntry.coachID = undefined;
   await qPoolEntry.save();
   await sleep(5000);
 
-  delAllMsgs({ DMChannels: qTicket.student.dmChannel });
+  delAllMsgs({ DMChannels: qTicket.coach.dmChannel });
 
   console.log('Finished Coaching');
 };
