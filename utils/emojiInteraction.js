@@ -122,7 +122,11 @@ export const freeEmojiInterWGroup = async (group, ticket, msgReact = false) => {
     return;
   ticket.lockedEmojiInteractionGroups.splice(groupIndex, 1);
   // TODO : fix type
-  await emojiInteractions[ticket.pool.name][group].onDel?.(ticket, msgReact);
+  try {
+    await emojiInteractions[ticket.pool.name][group].onDel?.(ticket, msgReact);
+  } catch (e) {
+    console.log(e);
+  }
 };
 
 /**@param {MessageReaction} msgReact

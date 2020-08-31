@@ -106,7 +106,7 @@ export const handleConfIsReplay = async (isReplay, msg, url) => {
 /** @param {Message} msg*/
 export const handleConfirmation = async msg => {
   await msg.author.send(isSC2Replay(1));
-  await sleep(10 * 1000);
+  await sleep(60 * 1000);
   await delAllMsgs({ UserIDs: msg.author.id });
 };
 

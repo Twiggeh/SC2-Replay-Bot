@@ -174,10 +174,10 @@ export const createCoaches = async coachIds => {
   // await putAllReactsOnDashes(dashes);
 };
 
-import { delAllMsgs, includesAnyArr, getStrUTCDay, includesAny } from './utils.js';
+import { delAllMsgs, includesAnyArr, getStrUTCDay } from './utils.js';
 import Coach, { availSchema } from '../Models/Coach.js';
 import { allCoachIds } from '../provider/provider.js';
-import { getDashboards, getDashboard, finishedCoachingStudent } from './dash.js';
+import { getDashboards, getDashboard } from './dash.js';
 import { Message } from 'discord.js';
-import { QUEUE_POOL, DASHBOARD_POOL } from '../init.js';
+import { DASHBOARD_POOL } from '../init.js';
 import { freeEmojiInterWGroup } from './emojiInteraction.js';
