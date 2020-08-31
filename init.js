@@ -66,76 +66,7 @@ registerEmojiInteraction(DASHBOARD_POOL, {
 registerEmojiInteraction(COACHLOG_POOL, {
   prevPage: {
     emojis: ['✅', '🛑'],
-    /** @param {import('./utils/ticket.js').CL_Ticket} clTicket */
-    onAdd: async (clTicket, emoji, msgReact) => {
-      // TODO : Free up the student's QUEUE_TICKET if he was satisfied, if not reset it.
-      const { dTicket, qTicket } = clTicket;
-
-      /** @type {import('./Models/CoachLog.js').CL_Opts} */
-      const clTOpts = {
-        coachID: clTicket.coachID,
-        coachName: qTicket.coach.tag,
-        studentName: qTicket.student.tag,
-        studentID: qTicket.student.id,
-        activatedAt: qTicket.activatedAt,
-        startedCoaching: dTicket.startedCoaching,
-        endedCoaching: Date.now(),
-        race: qTicket.race,
-        rank: qTicket.rank,
-        vsRace: qTicket.vsRace,
-        url: qTicket.url,
-        content: qTicket.content,
-      };
-      // TODO : ratings for coach and student
-      // TODO : wrap this into an interrupt runner.
-      switch (emoji) {
-        case '✅': {
-          clTOpts.success = true;
-          delete QUEUE_POOL[qTicket.id];
-
-          await Queue_PoolEntry.findOneAndDelete({ id: qTicket.id });
-          await msgReact.message.channel.send(thankYou(msgReact));
-          break;
-        }
-        case '🛑': {
-          qTicket.startedCoaching = undefined;
-          qTicket.coach = undefined;
-          qTicket.activatedAt = Date.now();
-          qTicket.emergency = false;
-
-          /** @type {import('./Models/Queue_Pool.js').QPE_Opts} */
-          const qPoolEntry = await Queue_PoolEntry.findOne({ id: qTicket.id });
-          qPoolEntry.coachID = undefined;
-          qPoolEntry.startedCoaching = undefined;
-          qPoolEntry.activatedAt = Date.now();
-          await qPoolEntry.save();
-
-          clTOpts.success = false;
-
-          await msgReact.message.channel.send(queueRecycle(clTOpts));
-          break;
-        }
-        default:
-          return badEmoji(msgReact);
-      }
-
-      const cLEntry = new CoachLogEntry(clTOpts);
-      cLEntry.save();
-
-      // free the coaches dashboard
-      dTicket.studentQTicketID = undefined;
-      dTicket.startedCoaching = undefined;
-      dTicket.endedCoaching = undefined;
-      dTicket.lockedEmojiInteractionGroups = [];
-
-      delete COACHLOG_POOL[clTicket.id];
-
-      updateQueuePool();
-      await updateAllDashboards();
-      await sleep(10000);
-
-      delAllMsgs({ UserIDs: clTOpts.studentID });
-    },
+    onAdd: handleAfterCoachingInter,
   },
 });
 
@@ -230,18 +161,14 @@ import {
   goToPrevPage,
   selectStudent,
   goToNextPage,
-  getDashboard,
   updateAllDashboards,
   putAllReactsOnDash,
   getDashboards,
 } from './utils/dash.js';
-import { createCoaches } from './utils/coach.js';
 import { getTicketTimeout, buildTicket } from './utils/ticket.js';
 import Queue_PoolEntry from './Models/Queue_Pool.js';
 import Discord, { Message } from 'discord.js';
-import { badEmoji, sleep, delAllMsgs } from './utils/utils.js';
-import CoachLogEntry from './Models/CoachLog.js';
-import { thankYou, queueRecycle } from './messages.js';
 import { client } from './app.js';
+import { handleAfterCoachingInter } from './utils/coachlog.js';
 
 export default init;
