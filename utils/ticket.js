@@ -86,6 +86,7 @@
  * @prop {string} studentQTicketID - ID of the QUEUE_POOL entry that is has been coached.
  * @prop {D_Ticket} dTicket - The Dashboard Ticket of the Coach
  * @prop {Q_Ticket} qTicket - The QueuePool Ticket of the User
+ * @prop {boolean} [timedOut=false] - If the ticket has timed out
  */
 
 /**@typedef AllTicket_Out
@@ -102,13 +103,13 @@ export const timeOutHandler = async (ticket, system) => {
         negatePtr: true,
         actions: [
           () => ticket.origMsg.author.send(isSC2ReplayReminder),
-          () => sleep(10 * 1000),
+          () => sleep(30 * 1000),
           () => ticket.origMsg.author.send(isSC2Fail),
         ],
       });
       if (aborted) return;
       DATA_FLOW[ticket.origMsg.author.id].abort().rejectAll().remove();
-      await sleep(10 * 1000);
+      await sleep(15 * 1000);
       await delAllMsgs({ UserIDs: ticket.origMsg.author.id });
       return;
     }
@@ -125,7 +126,7 @@ export const timeOutHandler = async (ticket, system) => {
       });
       if (aborted) return;
       DATA_FLOW[ticket.origMsg.author.id].abort().rejectAll().remove();
-      await sleep(10 * 1000);
+      await sleep(15 * 1000);
       await delAllMsgs({ UserIDs: ticket.origMsg.author.id });
       return;
     }
@@ -143,6 +144,26 @@ export const timeOutHandler = async (ticket, system) => {
       // TODO : Finish aborted
       return aborted;
     }
+    case 'COACHLOG_POOL': {
+      /**@type {CL_Ticket}*/
+      const clTicket = ticket;
+      const cltOpts = createCLTOpts(clTicket);
+      newInterruptRunner({
+        abortPtr: ticket,
+        abortPath: 'timedOut',
+        negatePtr: true,
+        actions: [
+          async () => {
+            successAfterCoachingInter(cltOpts);
+            await clTicket.qTicket.student.send(timeoutThankYou(cltOpts.studentName));
+            cleanUpAfterCoaching(clTicket, cltOpts);
+          },
+          sleep(5000),
+          delAllMsgs({ UserIDs: cltOpts.studentID }),
+        ],
+      });
+      return;
+    }
     default:
       console.error(new Error(`Wrong system (${system}) provided.`));
   }
@@ -154,15 +175,15 @@ export const timeOutHandler = async (ticket, system) => {
 export const getTicketTimeout = pool => {
   switch (pool.name) {
     case 'IS_REPLAY_POOL':
-      return 10 * 1000;
+      return 60 * 1000;
     case 'DATA_VALIDATION_POOL':
-      return 40 * 1000;
+      return 60 * 1000;
     case 'QUEUE_POOL':
-      return 10 * 1000; // TODO : Make longer
+      return 0; // TODO : Add pings
     case 'DASHBOARD_POOL':
       return 0;
     case 'COACHLOG_POOL':
-      return 0;
+      return 60 * 1000;
     default:
       console.error(`Wrong name provided (${pool.name})`);
   }
@@ -383,6 +404,7 @@ import {
   missingDataReminder,
   isSC2Fail,
   isSC2ReplayReminder,
+  timeoutThankYou,
 } from '../messages.js';
 import { sleep, delAllMsgs, includesAny } from './utils.js';
 import { DATA_FLOW } from '../provider/dataFlow.js';
@@ -402,4 +424,11 @@ import {
 } from '../config/global.js';
 import Queue_PoolEntry from '../Models/Queue_Pool.js';
 import { User } from 'discord.js';
-import { DASHBOARD_POOL } from '../init.js';
+import { DASHBOARD_POOL, QUEUE_POOL, COACHLOG_POOL } from '../init.js';
+import {
+  createCLTOpts,
+  successAfterCoachingInter,
+  cleanUpAfterCoaching,
+} from './coachlog.js';
+import { updateAllDashboards } from './dash.js';
+import CoachLogEntry from '../Models/CoachLog.js';
