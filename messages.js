@@ -168,16 +168,13 @@ export const dashboardMessage = (discordCoach, page = 1, maxEl = 5) => {
         waitingFor: String(waitingFor),
         beingCoached: String(beingCoached),
       };
-      // TODO : maybe implement without using _QUEUE_POOL
-      // let i = maxEl * (page - 1);
       for (let key in longestDataStr) {
-        // if (i === maxEl * page) break;
-        longestDataStr[key] = Math.max(
-          longestDataStr[key],
-          renderData[ticket.emojiIdentifier][key].length // TODO cannot read property ID of undefined
-        );
-        //i++;
+        let renderDataLength = renderData[ticket.emojiIdentifier][key].length;
+        if (DashEmojis.includes(renderData[ticket.emojiIdentifier][key])) {
+          renderDataLength -= 1;
       }
+        longestDataStr[key] = Math.max(longestDataStr[key], renderDataLength);
+    }
     }
 
     /**@typedef {[{content: string, maxLength: number}]} FormatData
@@ -186,9 +183,13 @@ export const dashboardMessage = (discordCoach, page = 1, maxEl = 5) => {
       if (data.length === 0) return '';
       let res = '|';
       data.forEach(({ content, maxLength }) => {
+        let contentLength = content.length;
+        if (DashEmojis.includes(content)) {
+          contentLength -= 1;
+        }
         const longestEl = maxLength + 2;
-        const padStart = Math.max(1, Math.floor((longestEl - content.length - 1) / 2));
-        const padEnd = longestEl - content.length - padStart;
+        const padStart = Math.max(1, Math.floor((longestEl - contentLength - 1) / 2));
+        const padEnd = longestEl - contentLength - padStart;
         res += `${' '.repeat(padStart)}${content}${' '.repeat(padEnd)}|`;
       });
       return res;
