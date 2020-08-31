@@ -1,16 +1,28 @@
 export const client = new Discord.Client();
 
+client.login(botKey);
+
+const loginLock = {};
+const p = new Promise((res, rej) => {
+  loginLock.res = res;
+  loginLock.rej = rej;
+});
+loginLock.p = p;
+
+client.on('ready', () => {
+  loginLock.res();
+  console.log('Bot online');
+});
+
 mongoose.connect(mongoDbKey, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
 
 (async () => {
-  const allCoaches = await getCoaches();
+  await loginLock.p;
+  // const allCoaches = await getCoaches();
   await init();
-  //  const coaches = ['145856913014259712'];
-
-  client.on('ready', () => console.log('Bot online'));
 
   client.on('messageReactionAdd', async (msgReact, user) => {
     if (user.bot) return;
@@ -154,8 +166,7 @@ mongoose.connect(mongoDbKey, {
       return;
     }
     if (!shouldHandleMsg(msg)) return;
-    // await delAllMsgs({ UserIDs: coaches });
-    const [hasReplay, url, urlArr] = getMsgAttachments(msg);
+    const [hasReplay, url] = getMsgAttachments(msg);
     const { playingAgainst, playingAs, rank, replay } = whichDataPresent(msg);
     if (!hasReplay) return;
     try {
@@ -175,8 +186,6 @@ mongoose.connect(mongoDbKey, {
   });
 })();
 
-client.login(botKey);
-
 import init, {
   DATA_VALIDATION_POOL,
   QUEUE_POOL,
@@ -185,7 +194,7 @@ import init, {
   COACHLOG_POOL,
 } from './init.js';
 import mongoose from 'mongoose';
-import Discord, { MessageReaction } from 'discord.js';
+import Discord from 'discord.js';
 import { botKey, mongoDbKey } from './config/keys.js';
 import {
   freeEmojiInter,
