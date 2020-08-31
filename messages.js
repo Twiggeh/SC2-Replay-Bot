@@ -172,9 +172,9 @@ export const dashboardMessage = (discordCoach, page = 1, maxEl = 5) => {
         let renderDataLength = renderData[ticket.emojiIdentifier][key].length;
         if (DashEmojis.includes(renderData[ticket.emojiIdentifier][key])) {
           renderDataLength -= 1;
-      }
+        }
         longestDataStr[key] = Math.max(longestDataStr[key], renderDataLength);
-    }
+      }
     }
 
     /**@typedef {[{content: string, maxLength: number}]} FormatData
@@ -251,9 +251,7 @@ ${getCoachAbleStudents()}
 export const successfulCoaching = {
   content: `Were you satisfied with the coach?
 If the answer is no and you would like to go again, please react with 🛑.
-If everything was to your liking then you can react with ✅.
-
-If there was a lot of useful information, that you think could help other people you could make a small writeup and submit it to our replay channel!`,
+If everything was to your liking then you can react with ✅.`,
 };
 
 /**
@@ -292,6 +290,18 @@ Have a wonderful day :D`,
   };
 };
 
+/**
+ * @param {string} userName
+ */
+export const timeoutThankYou = userName => {
+  return {
+    content: `**Thank you, ${userName}!**
+
+We will assume that the coaching experience was satisfactory.
+Have a wonderful day :D`,
+  };
+};
+
 import { User as DiscordUser, MessageReaction } from 'discord.js';
-import { raceEmojis, vsRaceEmojis, rankEmojis, numberIdent } from './Emojis.js';
+import { vsRaceEmojis, numberIdent, DashEmojis } from './Emojis.js';
 import { QUEUE_POOL } from './init.js';
