@@ -2,8 +2,8 @@
  * Cleans up all pools after coaching the student.
  * Uploads the log to the database
  * @param {import('./ticket.js').CL_Ticket} clTicket
- * @param {import('../Models/CoachLog.js').CL_Opts} cltOpts
- * @param {boolean} delQueuePoolEntry
+ * @param {import('../Models/CoachLog.js').CL_Opts} [ cltOpts=false ]
+ * @param {boolean} [ delQueuePoolEntry=false ]
  */
 export const cleanUpAfterCoaching = async (
   clTicket,
@@ -22,11 +22,13 @@ export const cleanUpAfterCoaching = async (
   updateQueuePool();
 
   const asyncOps = [
-    () => {
+    (() => {
       if (delQueuePoolEntry) return Queue_PoolEntry.findOneAndDelete({ id: qTicket.id });
-    },
+    })(),
     updateAllDashboards(),
-    new CoachLogEntry(cltOpts).save(),
+    (() => {
+      if (cltOpts) return new CoachLogEntry(cltOpts).save();
+    })(),
   ];
   await Promise.allSettled(asyncOps);
 };
