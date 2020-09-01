@@ -37,7 +37,11 @@ export const newInterruptRunner = async ({
 
   for (let i = 0; i < actions.length; i++) {
     dataFlow.curAction = i;
-    if (freshPointer(abortPtr, abortPath, negatePtr) && dataFlow.aborted) return true;
+    if (freshPointer(abortPtr, abortPath, negatePtr) && dataFlow.aborted) {
+      DATA_FLOW[dataFlowId]?.rejectAll()?.remove();
+      delete DATA_FLOW[dataFlowId];
+      return true;
+    }
     try {
       await actions[i]();
       await dataFlow.locks[i]?.[0];
@@ -45,8 +49,11 @@ export const newInterruptRunner = async ({
       console.log(e);
     }
   }
+  DATA_FLOW[dataFlowId]?.resolveAll()?.remove();
+  delete DATA_FLOW[dataFlowId];
   return false;
 };
 
 import { deepGetObject, createLock } from './utils.js';
 import { dataFlowFactory } from './dataFlow.js';
+import { DATA_FLOW } from '../provider/dataFlow.js';
