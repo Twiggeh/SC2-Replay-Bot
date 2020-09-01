@@ -164,9 +164,11 @@ export const getPages = dash => {
   const contentArr = dash.content.split('\n');
   let index = -1;
   for (let i = contentArr.length - 1; i > -1; i--) {
-    index = (index === -1) * contentArr[i].includes('Page') * (i + 1);
+    index = Math.max(
+      index,
+      (index === -1) * contentArr[i].includes('Page') * (i + 1) - 1
+    );
   }
-  index -= 1;
   if (index === -1) return [1, 1];
   const [curPage, maxPage] = contentArr[index]
     .split('/')
