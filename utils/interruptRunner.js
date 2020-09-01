@@ -38,8 +38,8 @@ export const newInterruptRunner = async ({
   for (let i = 0; i < actions.length; i++) {
     dataFlow.curAction = i;
     if (freshPointer(abortPtr, abortPath, negatePtr) && dataFlow.aborted) {
-      DATA_FLOW[dataFlowId]?.rejectAll()?.remove();
-      delete DATA_FLOW[dataFlowId];
+      // DATA_FLOW[dataFlowId]?.rejectAll()?.remove();
+      // delete DATA_FLOW[dataFlowId];
       return true;
     }
     try {
@@ -49,8 +49,8 @@ export const newInterruptRunner = async ({
       console.log(e);
     }
   }
-  DATA_FLOW[dataFlowId]?.resolveAll()?.remove();
-  delete DATA_FLOW[dataFlowId];
+  //DATA_FLOW[dataFlowId]?.resolveAll()?.remove();
+  //delete DATA_FLOW[dataFlowId];
   return false;
 };
 

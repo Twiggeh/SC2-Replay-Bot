@@ -18,7 +18,7 @@ export const shouldHandleMsg = msg => {
  */
 export const shouldHandleReact = msgReact => {
   let result = 1;
-  result &= !msgReact.message.author.bot;
+  result &= msgReact.message.author.bot;
   result &= msgReact.message.channel.type === 'dm';
   return result;
 };
