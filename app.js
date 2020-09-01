@@ -26,7 +26,7 @@ mongoose.connect(mongoDbKey, {
   await init();
 
   client.on('messageReactionAdd', async (msgReact, user) => {
-    if (user.bot) return;
+    if (!shouldHandleReact(msgReact)) return;
     // TODO : Implement filter, right now all messages that are reacted to get pushed through here
 
     const msgInPool = isPartOfPool(msgReact.message.id);
@@ -132,7 +132,7 @@ mongoose.connect(mongoDbKey, {
   });
 
   client.on('messageReactionRemove', async (msgReact, user) => {
-    // TODO : Filter messages.
+    if (!shouldHandleReact(msgReact)) return;
     const msgInPool = isPartOfPool(msgReact.message.id);
     if (!msgInPool) {
       return;
@@ -219,6 +219,7 @@ import {
   delAllMsgs,
   sleep,
   badEmoji,
+  shouldHandleReact,
 } from './utils/utils.js';
 import { whichDataPresent, getMsgAttachments, buildTicket } from './utils/ticket.js';
 import { newInterruptRunner } from './utils/interruptRunner.js';
@@ -227,4 +228,3 @@ import { isPartOfPool, POOLS } from './utils/pool.js';
 import { DATA_FLOW } from './provider/dataFlow.js';
 import { allEmojis, DashEmojis } from './Emojis.js';
 import { isNotSC2Replay } from './messages.js';
-import { getCoaches } from './provider/provider.js';

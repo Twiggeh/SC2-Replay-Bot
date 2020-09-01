@@ -6,10 +6,14 @@ export const sleep = async time => new Promise(resolve => setTimeout(resolve, ti
 
 /** @param {Message} msg @returns {boolean} */
 export const shouldHandleMsg = msg => {
-  if (msg.author.bot) return false;
-  if (msg.attachments === undefined) return false;
-  if (msg.channel.name !== 'replays-1' && msg.channel.name !== 'replays-2') return false;
-  return true;
+/**
+ * @param {MessageReaction} msgReact
+ */
+export const shouldHandleReact = msgReact => {
+  let result = 1;
+  result &= !msgReact.message.author.bot;
+  result &= msgReact.message.channel.type === 'dm';
+  return result;
 };
 
 /**
