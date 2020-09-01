@@ -103,7 +103,7 @@ mongoose.connect(mongoDbKey, {
             },
             true
           );
-          DATA_FLOW[getRecipId(msgReact)].resolveInd(1);
+          DATA_FLOW[getRecipId(msgReact)].resolveAll();
 
           console.log('all emojies were received.');
         }
