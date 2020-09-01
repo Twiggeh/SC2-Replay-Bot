@@ -161,6 +161,31 @@ export const handleConfigCoach = async msg => {
       );
       return;
     }
+    case `${CCMDDISCR}deletereplay`: {
+      const emojiId = rawCommand[1] * 1;
+      if (isNaN(emojiId)) return console.log('User did not provide a number');
+      if (emojiId === undefined) return console.log('no id to kill specified');
+      const dash = await getDashboard(msg.author);
+      const QUEUE_POOL_KEYS = Object.keys(QUEUE_POOL);
+      let qTicket;
+      for (const key of QUEUE_POOL_KEYS) {
+        if (QUEUE_POOL[key].emojiIdentifier == emojiId) {
+          qTicket = QUEUE_POOL[key];
+          break;
+        }
+      }
+      if (qTicket === undefined)
+        return console.log(`could not find qTicket with ID ${emojiId}`);
+      if (qTicket.coach)
+        return console.log('Cannot remove a replay if it is already being coached.');
+
+      await cleanUpAfterCoaching({
+        id: 123,
+        dTicket: { id: dash.id },
+        qTicket: { id: qTicket.id },
+      });
+      return;
+    }
     default: {
       // TODO: throw bad command at coach
       console.log('bad command');
@@ -179,5 +204,6 @@ import Coach, { availSchema } from '../Models/Coach.js';
 import { allCoachIds } from '../provider/provider.js';
 import { getDashboards, getDashboard } from './dash.js';
 import { Message } from 'discord.js';
-import { DASHBOARD_POOL } from '../init.js';
+import { DASHBOARD_POOL, QUEUE_POOL } from '../init.js';
 import { freeEmojiInterWGroup } from './emojiInteraction.js';
+import { cleanUpAfterCoaching } from './coachlog.js';
