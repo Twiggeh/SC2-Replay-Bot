@@ -6,6 +6,13 @@ export const sleep = async time => new Promise(resolve => setTimeout(resolve, ti
 
 /** @param {Message} msg @returns {boolean} */
 export const shouldHandleMsg = msg => {
+  let result = 1;
+  result &= !msg.author.bot;
+  result &= msg.attachments !== undefined;
+  result &= msg.channel.name === 'replays-1' || msg.channel.name === 'replays-2';
+  return result;
+};
+
 /**
  * @param {MessageReaction} msgReact
  */
@@ -336,7 +343,7 @@ import {
   missingDataError,
   isSC2Replay,
 } from '../messages.js';
-import { User, Message, DMChannel } from 'discord.js';
+import { User, Message, DMChannel, MessageReaction } from 'discord.js';
 import { client } from '../app.js';
 import { DATA_FLOW } from '../provider/dataFlow.js';
 import { buildTicket } from './ticket.js';

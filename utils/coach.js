@@ -30,7 +30,7 @@ export const getDBCoach = async id => {
 export const isCoachCmd = msg => {
   let result = 1;
   result &= !msg.author.bot;
-  result &= !(msg.channel.type !== 'dm');
+  result &= msg.channel.type === 'dm';
 
   const userRoles = msg.client.guilds.cache.array()[0].members.cache.get(msg.author.id)
     ._roles;
