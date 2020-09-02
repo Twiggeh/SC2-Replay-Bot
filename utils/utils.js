@@ -117,7 +117,7 @@ export const handleConfIsReplay = async (isReplay, msg, url) => {
 /** @param {Message} msg*/
 export const handleConfirmation = async msg => {
   await msg.author.send(isSC2Replay(1));
-  await sleep(60 * 1000);
+  await sleep(10 * 1000);
   await delAllMsgs({ UserIDs: msg.author.id });
 };
 
@@ -343,7 +343,7 @@ import {
   missingDataError,
   isSC2Replay,
 } from '../messages.js';
-import { User, Message, DMChannel, MessageReaction } from 'discord.js';
+import { User, Message, DMChannel } from 'discord.js';
 import { client } from '../app.js';
 import { DATA_FLOW } from '../provider/dataFlow.js';
 import { buildTicket } from './ticket.js';
