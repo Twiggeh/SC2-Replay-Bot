@@ -15,10 +15,11 @@ export const shouldHandleMsg = msg => {
 
 /**
  * @param {MessageReaction} msgReact
+ * @param {User | import('discord.js').PartialUser} user
  */
-export const shouldHandleReact = msgReact => {
+export const shouldHandleReact = (msgReact, user) => {
   let result = 1;
-  result &= msgReact.message.author.bot;
+  result &= !user.bot;
   result &= msgReact.message.channel.type === 'dm';
   return result;
 };
@@ -343,7 +344,7 @@ import {
   missingDataError,
   isSC2Replay,
 } from '../messages.js';
-import { User, Message, DMChannel } from 'discord.js';
+import { User, Message, DMChannel, MessageReaction } from 'discord.js';
 import { client } from '../app.js';
 import { DATA_FLOW } from '../provider/dataFlow.js';
 import { buildTicket } from './ticket.js';

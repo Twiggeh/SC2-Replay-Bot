@@ -26,7 +26,7 @@ mongoose.connect(mongoDbKey, {
   await init();
 
   client.on('messageReactionAdd', async (msgReact, user) => {
-    if (!shouldHandleReact(msgReact)) return;
+    if (!shouldHandleReact(msgReact, user)) return;
     // TODO : Implement filter, right now all messages that are reacted to get pushed through here
 
     const msgInPool = isPartOfPool(msgReact.message.id);
@@ -132,7 +132,7 @@ mongoose.connect(mongoDbKey, {
   });
 
   client.on('messageReactionRemove', async (msgReact, user) => {
-    if (!shouldHandleReact(msgReact)) return;
+    if (!shouldHandleReact(msgReact, user)) return;
     const msgInPool = isPartOfPool(msgReact.message.id);
     if (!msgInPool) {
       return;
