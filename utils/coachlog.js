@@ -42,7 +42,6 @@ export const successAfterCoachingInter = clTOpts => {
 };
 
 /**
- *
  * @param {import('./ticket.js').CL_Ticket} clTicket
  * @returns {import('../Models/CoachLog.js').CL_Opts}
  */
@@ -99,7 +98,7 @@ export const handleAfterCoachingInter = async (clTicket, emoji, msgReact) => {
   }
 
   await cleanUpAfterCoaching(clTicket, cltOpts, emoji !== '🛑');
-  await sleep(10000);
+  await sleep(10 * 1000);
 
   delAllMsgs({ UserIDs: cltOpts.studentID });
 };

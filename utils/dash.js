@@ -235,6 +235,8 @@ export const selectStudent = async (dashT, emoji, msgReact) => {
   /** @type {import('./ticket.js').Q_Ticket} */
   const qTicket = QUEUE_POOL[QUEUE_KEYS[index]];
 
+  qTicket.beingCoached = true;
+
   if (!qTicket)
     return console.log("Coach tried to select a emoji that doesn't have a student on it");
   // don't allow other coaches to select this student
@@ -276,6 +278,8 @@ export const finishedCoachingStudent = async (dTicket, msgReact) => {
   /** @type {import('./ticket.js').Q_Ticket} */
   const qTicket = QUEUE_POOL[dTicket.studentQTicketID];
   if (!qTicket?.student) return console.log('No student to uncoach');
+
+  qTicket.beingCoached = false;
 
   // Ask user whether coaching has succeeded.
   const answer = await qTicket.student.send(successfulCoaching);

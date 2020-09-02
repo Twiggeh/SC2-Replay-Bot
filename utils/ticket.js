@@ -68,6 +68,7 @@
  * @prop {User} student - Student that has Requested the coaching
  * @prop {number} emojiIdentifier - EmojiNumber that is going to allow the coach to pull the user.
  * @prop {number} startedCoaching - Date.now() of when the student started to be coached
+ * @prop {boolean} beingCoached - If the ticket is being coached right now.
  * @typedef {Ticket & Q} Q_Ticket */
 
 /**@typedef {Object} D_Ticket

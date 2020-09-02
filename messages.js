@@ -145,7 +145,9 @@ export const dashboardMessage = (discordCoach, page = 1, maxEl = 5) => {
       const rank = ticket.rank;
       const vsRace = vsRaceEmojis[ticket.vsRace].id;
       const beingCoached =
-        ticket?.coach?.username === undefined ? ' - ' : ticket?.coach?.username;
+        ticket?.coach?.username === undefined && !ticket.beingCoached
+          ? ' - '
+          : ticket?.coach?.username;
       const minsElapsed = Math.floor((Date.now() - ticket.activatedAt) / 1000) / 60;
       const waitingFor = `${
         minsElapsed / 60 > 1
