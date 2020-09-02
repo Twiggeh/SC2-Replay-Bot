@@ -280,11 +280,14 @@ export const finishedCoachingStudent = async (dTicket, msgReact) => {
   if (!qTicket?.student) return console.log('No student to uncoach');
 
   qTicket.beingCoached = false;
+  // local reference, because a student might be faster than this function (handleAfterCoachInter runs before this code then )
+  const coachDm = qTicket.coach.dmChannel;
 
   // Ask user whether coaching has succeeded.
   const answer = await qTicket.student.send(successfulCoaching);
   await answer.react('✅');
   await answer.react('🛑');
+  // TODO: make this and the other binary choice operators work the same as the datavalidation queue
 
   /** @type {import('./ticket.js').CL_Ticket} */
   const options = {
@@ -304,7 +307,7 @@ export const finishedCoachingStudent = async (dTicket, msgReact) => {
   await qPoolEntry.save();
   await sleep(5000);
 
-  delAllMsgs({ DMChannels: qTicket.coach.dmChannel });
+  delAllMsgs({ DMChannels: coachDm });
 
   console.log('Finished Coaching');
 };
