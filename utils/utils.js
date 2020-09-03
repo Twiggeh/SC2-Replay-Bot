@@ -77,13 +77,6 @@ export const includesAny = (str, arr) => {
   return Boolean(result);
 };
 
-const sendConfirmIsReplay = async msg => {
-  const answer = await msg.author.send(confirmIsReplayMsg);
-  await answer.react('✅');
-  await answer.react('🛑');
-  return answer;
-};
-
 /** @returns {Lock} Promise, resolve, reject*/
 export const createLock = () => {
   const ptr = {};
@@ -254,7 +247,9 @@ export const handlePushToCoaches = async () => {
   await updateAllDashboards();
 };
 
-/** @param {MessageReaction} msgReact @returns {string} ID of the recipient */
+/**
+ * Returns the messages recipients id
+ * @param {MessageReaction} msgReact @returns {string} ID of the recipient */
 export const getRecipId = msgReact => msgReact.message.channel.recipient.id;
 
 /**@param {object} obj Object to traverse
@@ -275,23 +270,6 @@ export const hasAllProperties = (obj, props) => {
 export const clearTTimeout = ticket => {
   clearTimeout(ticket.timeOutId);
   ticket.timedOut = false;
-};
-
-/**@param {MessageReaction} msgReact
- * @param {DiscordUser} user */
-export const handleUserReactedTooFast = async (msgReact, user, ticket) => {
-  // TODO : Sometimes the filter gets bypassed and people can react to stuff that is not in the normal channels
-  // TODO : The bypass is a problem in app.js
-  // clearTTimeout(ticket);
-
-  await user.send(reactedTooFast);
-  const id = msgReact.message.channel.recipient.id;
-  DATA_FLOW[id].abort();
-  try {
-    DATA_FLOW[id]?.rejectAll?.('aborted');
-  } catch (e) {
-    console.error(e);
-  }
 };
 
 export const getStrUTCDay = num => {
@@ -338,12 +316,7 @@ export const badEmoji = msgReact =>
   console.log('User tried to provide wrong emote : ' + emojiFromMsgReact(msgReact));
 
 import { updateAllDashboards, date } from './dash.js';
-import {
-  confirmIsReplayMsg,
-  reactedTooFast,
-  missingDataError,
-  isSC2Replay,
-} from '../messages.js';
+import { confirmIsReplayMsg, missingDataError, isSC2Replay } from '../messages.js';
 import { User, Message, DMChannel, MessageReaction } from 'discord.js';
 import { client } from '../app.js';
 import { DATA_FLOW } from '../provider/dataFlow.js';

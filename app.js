@@ -30,18 +30,12 @@ mongoose.connect(mongoDbKey, {
     // TODO : Implement filter, right now all messages that are reacted to get pushed through here
 
     const msgInPool = isPartOfPool(msgReact.message.id);
-    if (!msgInPool) {
-      return;
-      // TODO : REMOVE THESE
-      // await handleUserReactedTooFast(msgReact, user);
-      // return console.error('User reacted on a message that is not in the message Pool');
-    }
+    if (!msgInPool) return;
+
     if (isLocked(msgReact, POOLS[msgInPool])) return;
 
     switch (msgInPool) {
       case 'IS_REPLAY_POOL': {
-        // TODO : Lock the interaction (reactions) down.
-
         switch (msgReact._emoji.name) {
           case '✅': {
             const ticket = IS_REPLAY_POOL[msgReact.message.id];
@@ -107,9 +101,7 @@ mongoose.connect(mongoDbKey, {
 
           console.log('all emojies were received.');
         }
-        // extend timeout.
         // TODO : Has to have max time that the timeout can be extended.
-
         return;
       }
       case 'DASHBOARD_POOL': {
@@ -134,14 +126,7 @@ mongoose.connect(mongoDbKey, {
   client.on('messageReactionRemove', async (msgReact, user) => {
     if (!shouldHandleReact(msgReact, user)) return;
     const msgInPool = isPartOfPool(msgReact.message.id);
-    if (!msgInPool) {
-      return;
-      // TODO : remove these
-      //handleUserReactedTooFast(user);
-      // return console.error(
-      //   'User removed a reaction on a message that is not in the message Pool'
-      // );
-    }
+    if (!msgInPool) return;
     switch (msgInPool) {
       case 'DATA_VALIDATION_POOL': {
         await freeEmojiInter(msgReact, DATA_VALIDATION_POOL[msgReact.message.id]);
@@ -164,7 +149,7 @@ mongoose.connect(mongoDbKey, {
 
   client.on('message', async msg => {
     if (isCoachCmd(msg)) {
-      await handleConfigCoach(msg);
+      handleConfigCoach(msg);
       return;
     }
     if (!shouldHandleMsg(msg)) return;
