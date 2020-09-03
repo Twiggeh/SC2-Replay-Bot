@@ -67,13 +67,15 @@ export const createCLTOpts = clTicket => {
  * @param {MessageReaction} msgReact
  */
 export const handleAfterCoachingInter = async (clTicket, emoji, msgReact) => {
+  /** @type {{qTicket : import('./ticket.js').Q_Ticket}} */
   const { qTicket } = clTicket;
   const cltOpts = createCLTOpts(clTicket);
   // TODO : ratings for coach and student
   switch (emoji) {
     case '✅': {
       successAfterCoachingInter(cltOpts);
-      await msgReact.message.channel.send(thankYou(msgReact));
+      const answer = await msgReact.message.channel.send(thankYou(msgReact));
+      qTicket.delMsgPool.push(answer.id);
       break;
     }
     case '🛑': {
@@ -90,7 +92,8 @@ export const handleAfterCoachingInter = async (clTicket, emoji, msgReact) => {
       await qPoolEntry.save();
 
       cltOpts.success = false;
-      await msgReact.message.channel.send(queueRecycle(cltOpts));
+      const answer = await msgReact.message.channel.send(queueRecycle(cltOpts));
+      qTicket.delMsgPool.push(answer.id);
       break;
     }
     default:
@@ -100,7 +103,7 @@ export const handleAfterCoachingInter = async (clTicket, emoji, msgReact) => {
   await cleanUpAfterCoaching(clTicket, cltOpts, emoji !== '🛑');
   await sleep(10 * 1000);
 
-  delAllMsgs({ UserIDs: cltOpts.studentID });
+  delAllMsgs({ UserIDs: cltOpts.studentID }, { ticket: qTicket });
 };
 
 import { QUEUE_POOL, COACHLOG_POOL, DASHBOARD_POOL } from '../init.js';

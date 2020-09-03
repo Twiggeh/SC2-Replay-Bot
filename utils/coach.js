@@ -97,7 +97,7 @@ export const handleConfigCoach = async msg => {
     return false;
   };
 
-  // TODO : Buffer this maybe, maybe put into provider.
+  // TODO : Buffer getDBCoach maybe, maybe put into provider.
 
   const rawCommand = msg.content.toLowerCase().split(' ');
   switch (rawCommand[0]) {
@@ -132,8 +132,7 @@ export const handleConfigCoach = async msg => {
       break;
     }
     case `${CCMDDISCR}deleteallmessages`: {
-      await delAllMsgs({ DMChannels: msg.channel }, true);
-      // TODO : Send confirm
+      await delAllMsgs({ DMChannels: msg.channel }, { force: true });
       return;
     }
     case `${CCMDDISCR}getdashboard`: {

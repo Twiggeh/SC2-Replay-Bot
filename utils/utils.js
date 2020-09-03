@@ -26,17 +26,25 @@ export const shouldHandleReact = (msgReact, user) => {
 
 /**
  * Delete all normal messages. If force is specified will also remove Dashboards
+ * @typedef {Object} delAllMsgsOpts
+ * @prop {boolean} force - Delete EVERY message from the bot, even the Dashboards
+ * @prop {import('./ticket.js').AllTicket_Out} options.ticket
  * @param {{UserIDs: string[] | string, DMChannels: DMChannel[] | DMChannel}} arg0
- * @param {boolean} force - Delete EVERY message from the bot, even the Dashboards
+ * @param {delAllMsgsOpts} arg1
  */
-export const delAllMsgs = async ({ UserIDs, DMChannels }, force = false) => {
+export const delAllMsgs = async (
+  { UserIDs, DMChannels },
+  { force = false, ticket = undefined }
+) => {
   if (UserIDs !== undefined && !Array.isArray(UserIDs)) UserIDs = [UserIDs];
   if (DMChannels !== undefined && !Array.isArray(DMChannels)) DMChannels = [DMChannels];
+
   const filterSettled = obj => {
     if (obj.status === 'fulfilled') return obj.value;
     console.error(obj.status);
     console.error(obj.reason);
   };
+
   const fetchedDms = [];
   if (UserIDs) {
     const dmBuffer = [];
@@ -47,22 +55,29 @@ export const delAllMsgs = async ({ UserIDs, DMChannels }, force = false) => {
     const result = (await Promise.allSettled(dmBuffer)).map(filterSettled);
     fetchedDms.push(...result);
   }
+
   if (DMChannels) fetchedDms.push(...DMChannels);
   const msgBuffer = [];
+
   fetchedDms.forEach(dm => msgBuffer.push(dm.messages.fetch()));
+
   const fetchedMsgs = (await Promise.allSettled(msgBuffer)).map(filterSettled);
   const deleteBuffer = [];
+
   fetchedMsgs.forEach(msgMap =>
     Array.from(msgMap).forEach(snowFlakeWithMsg => {
       /** @type {Message} */
       const msg = snowFlakeWithMsg[1];
       const id = snowFlakeWithMsg[0];
       delFromAllPools(id);
-      msg.author.bot &&
-        (force || !msg.content.startsWith('.\n**DASHBOARD**')) &&
-        deleteBuffer.push(msg.delete());
+      let shouldDelete = 1;
+      shouldDelete &= msg.author.bot;
+      shouldDelete &= force || !msg.content.startsWith('.\n**DASHBOARD**');
+      shouldDelete &= force || ticket?.delMsgPool.includes(id);
+      if (shouldDelete) deleteBuffer.push(msg.delete());
     })
   );
+
   const deleteResult = await Promise.allSettled(deleteBuffer);
   console.log(
     `Deleted ${deleteResult.length} message${deleteResult.length > 1 ? 's' : ''}`
@@ -99,13 +114,14 @@ export const handleConfIsReplay = async (isReplay, msg, url) => {
 
   const answer = await msg.author.send(confirmIsReplayMsg);
 
-  buildTicket(IS_REPLAY_POOL, {
+  const rpTicket = await buildTicket(IS_REPLAY_POOL, {
     id: answer.id,
     content: msg.content,
     url,
     origMsg: msg,
     attachArr: msg.attachments,
   });
+  rpTicket.delMsgPool.push(answer.id);
 
   await answer.react('✅');
   await answer.react('🛑');
@@ -114,9 +130,9 @@ export const handleConfIsReplay = async (isReplay, msg, url) => {
 // TODO : Add available coaches as a parameter to SC2Replay and handleConfirmation
 /** @param {Message} msg*/
 export const handleConfirmation = async msg => {
-  await msg.author.send(isSC2Replay(1));
+  const answer = await msg.author.send(isSC2Replay(1));
   await sleep(10 * 1000);
-  await delAllMsgs({ UserIDs: msg.author.id });
+  await delAllMsgs({ UserIDs: msg.author.id }, { ticket: { delMsgPool: [answer.id] } });
 };
 
 /**
@@ -225,7 +241,7 @@ export const handleMissingData = async (msg, playingAgainst, playingAs, rank, ur
     return;
   }
   const [answer, actions] = await sendMissingData(msg, playingAgainst, playingAs, rank);
-  buildTicket(DATA_VALIDATION_POOL, {
+  const dvTicket = await buildTicket(DATA_VALIDATION_POOL, {
     attachArr: msg.attachments,
     id: answer.id,
     content: msg.content,
@@ -235,6 +251,7 @@ export const handleMissingData = async (msg, playingAgainst, playingAs, rank, ur
     race: playingAs,
     vsRace: playingAgainst,
   });
+  dvTicket.delMsgPool.push(answer.id);
   for (let action of actions) {
     await action(answer);
   }

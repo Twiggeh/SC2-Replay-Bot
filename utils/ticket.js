@@ -27,7 +27,8 @@
  * @prop {PlayerRace} race    - Players Race
  * @prop {EnemyRace}  vsRace  - VsPlayerRank
  * @prop {number} emojiIdentifier - The emojiIdentifier of the QT_Ticket (The Emoji to use to select a user)
- * @typedef {T_FactoryOptions & QT_Opts} QT_FactoryOptions */
+ * @typedef {T_FactoryOptions & QT_Opts} QT_FactoryOptions
+ */
 
 /**@typedef {T_FactoryOptions & QT_FactoryOptions & DVT_FactoryOptions | D_Ticket} AllTicket_FactoryOptions */
 
@@ -36,7 +37,9 @@
  * @prop {string}  url       - Url of the first detected replay
  * @prop {boolean} emergency - If this ticket has been neglected for too long.
  * @prop {string}  activatedAt      - The time at which the ticket got created
- * @prop {Message["attachments"]} attachArr - Array with all the Attachments of the orig msg */
+ * @prop {Message["attachments"]} attachArr - Array with all the Attachments of the orig msg
+ * @prop {string[]} delMsgPool - Ids of the messages that need to be deleted
+ */
 
 /** @typedef {Object} T_Out
  * @prop {Pool}    pool      - Instance of POOL
@@ -57,7 +60,7 @@
  * @prop {PlayerRace} vsRace - VsPlayerRank
  * @prop {Array}   reactionHistory  - The emoji reaction history
  * @prop {boolean} hasBeenReactedTo - If the Ticket has received a User's reaction
- * @typedef {IR_Ticket & DV} DV_Ticket */
+ * @typedef {IR_Ticket & DV} DV_Ticket*/
 
 /**@typedef {Object} Q
  * @prop {PlayerRank} rank     - Players Rank
@@ -78,6 +81,7 @@
  * @prop {string} studentQTicketID - ID of the QUEUE_POOL entry that is currently being coached.
  * @prop {number} startedCoaching - Date.now() of when the coach started to coach.
  * @prop {number} endedCoaching - Date.now() of the end of the coaching session.
+ * @prop {string[]} delMsgPool - Ids of the messages that need to be deleted
  */
 
 /**@typedef {Object} CL_Ticket
@@ -88,11 +92,13 @@
  * @prop {D_Ticket} dTicket - The Dashboard Ticket of the Coach
  * @prop {Q_Ticket} qTicket - The QueuePool Ticket of the User
  * @prop {boolean} [timedOut=false] - If the ticket has timed out
+ * @prop {string[]} delMsgPool - Ids of the messages that need to be deleted
  */
 
 /**@typedef AllTicket_Out
  * @type { CL_Ticket | D_Ticket | Ticket_Out | DV_Ticket & T_Out | IR_Ticket & T_Out | Q_Ticket & T_Out} */
 
+/** @param {AllTicket_Out} ticket  */
 export const timeOutHandler = async (ticket, system) => {
   console.log('timedout');
   ticket.timedOut = true;
@@ -103,32 +109,45 @@ export const timeOutHandler = async (ticket, system) => {
         abortPath: 'timedOut',
         negatePtr: true,
         actions: [
-          () => ticket.origMsg.author.send(isSC2ReplayReminder),
+          async () => {
+            const answer = await ticket.origMsg.author.send(isSC2ReplayReminder);
+            ticket.delMsgPool.push(answer.id);
+          },
           () => sleep(30 * 1000),
-          () => ticket.origMsg.author.send(isSC2Fail),
+          async () => {
+            const answer = await ticket.origMsg.author.send(isSC2Fail);
+            ticket.delMsgPool.push(answer.id);
+          },
         ],
       });
       if (aborted) return;
       DATA_FLOW[ticket.origMsg.author.id].abort().rejectAll().remove();
       await sleep(15 * 1000);
-      await delAllMsgs({ UserIDs: ticket.origMsg.author.id });
+      await delAllMsgs({ UserIDs: ticket.origMsg.author.id }, { ticket });
       return;
     }
     case 'DATA_VALIDATION_POOL': {
       const aborted = await newInterruptRunner({
+        // TODO : Interruptrunners actions probably need to have another place where delAllmsgs is run
         abortPtr: ticket,
         abortPath: 'timedOut',
         negatePtr: true,
         actions: [
-          () => ticket.origMsg.author.send(missingDataReminder),
+          async () => {
+            const answer = await ticket.origMsg.author.send(missingDataReminder);
+            ticket.delMsgPool.push(answer.id);
+          },
           () => sleep(60 * 1000),
-          () => ticket.origMsg.author.send(missingDataFail),
+          async () => {
+            const answer = await ticket.origMsg.author.send(missingDataFail);
+            ticket.delMsgPool.push(answer.id);
+          },
         ],
       });
       if (aborted) return;
       DATA_FLOW[ticket.origMsg.author.id].abort().rejectAll().remove();
       await sleep(15 * 1000);
-      await delAllMsgs({ UserIDs: ticket.origMsg.author.id });
+      await delAllMsgs({ UserIDs: ticket.origMsg.author.id }, { ticket });
       return;
     }
     case 'QUEUE_POOL': {
@@ -138,11 +157,10 @@ export const timeOutHandler = async (ticket, system) => {
         negatePtr: true,
         actions: [
           () => {
-            //TODO: finish timeout actions
+            //TODO: finish timeout actions (That would maybe be a ping to coaches)
           },
         ],
       });
-      // TODO : Finish aborted
       return aborted;
     }
     case 'COACHLOG_POOL': {
@@ -156,11 +174,14 @@ export const timeOutHandler = async (ticket, system) => {
         actions: [
           async () => {
             successAfterCoachingInter(cltOpts);
-            await clTicket.qTicket.student.send(timeoutThankYou(cltOpts.studentName));
+            const answer = await clTicket.qTicket.student.send(
+              timeoutThankYou(cltOpts.studentName)
+            );
+            ticket.delMsgPool.push(answer.id);
             cleanUpAfterCoaching(clTicket, cltOpts);
           },
           sleep(5000),
-          delAllMsgs({ UserIDs: cltOpts.studentID }),
+          delAllMsgs({ UserIDs: cltOpts.studentID }, { ticket }),
         ],
       });
       return;
@@ -180,7 +201,7 @@ export const getTicketTimeout = pool => {
     case 'DATA_VALIDATION_POOL':
       return 60 * 1000;
     case 'QUEUE_POOL':
-      return 0; // TODO : Add pings
+      return 0; // TODO : Extend
     case 'DASHBOARD_POOL':
       return 0;
     case 'COACHLOG_POOL':
@@ -236,6 +257,7 @@ export const ticketFactory = async (
         content,
         origMsg,
         url,
+        delMsgPool: [],
       };
     case 'IS_REPLAY_POOL':
       return {
@@ -251,6 +273,7 @@ export const ticketFactory = async (
         origMsg,
         url,
         attachArr,
+        delMsgPool: [],
       };
     case 'QUEUE_POOL': {
       /** @type {Q_Ticket} */
@@ -271,6 +294,7 @@ export const ticketFactory = async (
         student,
         emojiIdentifier,
         startedCoaching,
+        delMsgPool: [],
       };
       if (saveToDB) {
         const queuePoolEntry = new Queue_PoolEntry({
@@ -301,6 +325,7 @@ export const ticketFactory = async (
         startedCoaching,
         lockedEmojiInteractionGroups,
         coachID,
+        delMsgPool: [],
       };
     }
     case 'COACHLOG_POOL': {
@@ -312,6 +337,7 @@ export const ticketFactory = async (
         studentQTicketID,
         dTicket,
         qTicket,
+        delMsgPool: [],
       };
     }
     default:

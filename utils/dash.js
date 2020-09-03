@@ -3,7 +3,6 @@
 /** Does not auto create a DM, just sends a dashboard and returns the dashboard message
  *  @param {DiscordUser} discordCoach*/
 const createDashboard = async discordCoach => {
-  // TODO : hook up pages
   const dash = await discordCoach.send(dashboardMessage(discordCoach));
   putAllReactsOnDash(dash);
   return dash;
@@ -16,8 +15,6 @@ const createDashboard = async discordCoach => {
  * @returns {Promise<Message>}
  */
 export const getDashboard = async discordCoach => {
-  // TODO : Disallow the creation of a dashboard if the user does not have the right permissions.
-  // !!! IMPORTANT Disallow the creation of a dashboard if the user does not have the right permissions.
   const cache = await Promise.allSettled([
     getDBCoach(discordCoach.id),
     discordCoach.dmChannel.messages.fetch(),
@@ -132,9 +129,6 @@ export const putAllReactsOnDash = async dash => {
 
   const check = emojiObj => {
     for (const emojiName in emojiObj) {
-      // TODO : Needs to only exist for the Bot user, if the
-      // TODO : normal user has a reaction added this whole thing needs
-      // TODO : return false;
       const exists = dash.reactions.cache.get(emojiObj[emojiName].id);
       if (exists) continue;
       missing = true;
@@ -260,13 +254,13 @@ export const selectStudent = async (dashT, emoji, msgReact) => {
     updateAllDashboards(),
   ]);
 
-  const [{ value: queuePoolEntry }] = result;
+  const [{ value: queuePoolEntry }, { value: answer }] = result;
+  dashT.delMsgPool.push(answer.id); // TODO : make sure that in finishedCoaching student the dashboard is passed.
 
   queuePoolEntry.coachID = msgReact.message.channel.recipient.id;
   queuePoolEntry.startedCoaching = Date.now();
   await queuePoolEntry.save();
 
-  // TODO : Check whether updateAllDashboards calls the database
   console.log('Selected student');
 };
 
@@ -294,7 +288,8 @@ export const finishedCoachingStudent = async (dTicket, msgReact) => {
     qTicket,
     studentQTicketID: dTicket.studentQTicketID,
   };
-  await buildTicket(COACHLOG_POOL, options);
+  const clTicket = await buildTicket(COACHLOG_POOL, options);
+  clTicket.delMsgPool.push(answer.id);
 
   await answer.react('✅');
   await answer.react('🛑');
@@ -307,7 +302,7 @@ export const finishedCoachingStudent = async (dTicket, msgReact) => {
   await qPoolEntry.save();
   await sleep(5000);
 
-  delAllMsgs({ DMChannels: coachDm });
+  delAllMsgs({ DMChannels: coachDm }, { ticket: clTicket });
 
   console.log('Finished Coaching');
 };

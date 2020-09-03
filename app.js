@@ -27,7 +27,6 @@ mongoose.connect(mongoDbKey, {
 
   client.on('messageReactionAdd', async (msgReact, user) => {
     if (!shouldHandleReact(msgReact, user)) return;
-    // TODO : Implement filter, right now all messages that are reacted to get pushed through here
 
     const msgInPool = isPartOfPool(msgReact.message.id);
     if (!msgInPool) return;
@@ -51,9 +50,10 @@ mongoose.connect(mongoDbKey, {
             delete IS_REPLAY_POOL[msgReact.message.id];
             clearTTimeout(ticket);
             DATA_FLOW[getRecipId(msgReact)].abort().rejectAll('Not a replay').remove();
-            await msgReact.message.channel.send(isNotSC2Replay);
+            const answer = await msgReact.message.channel.send(isNotSC2Replay);
+            ticket.delMsgPool.push(answer.id);
             await sleep(10 * 1000);
-            await delAllMsgs({ DMChannels: msgReact.message.channel });
+            await delAllMsgs({ DMChannels: msgReact.message.channel }, { ticket });
             break;
           }
           default:
@@ -159,7 +159,6 @@ mongoose.connect(mongoDbKey, {
     const { playingAgainst, playingAs, rank, replay } = whichDataPresent(msg);
     if (!hasReplay) return;
     try {
-      // TODO : aborted should be set to false after timing out any of these handlers but it isn't for handleMissingData
       const aborted = await newInterruptRunner({
         dataFlowId: msg.author.id,
         actions: [
