@@ -39,6 +39,7 @@ mongoose.connect(mongoDbKey, {
         switch (msgReact._emoji.name) {
           case '✅': {
             const ticket = IS_REPLAY_POOL[msgReact.message.id];
+            delete IS_REPLAY_POOL[msgReact.message.id];
             clearTTimeout(ticket);
             // TODO : Put this (await ticket.origMsg.delete();) in after the message has been verified that all data is on it.
             // await ticket.origMsg.delete();
@@ -47,6 +48,7 @@ mongoose.connect(mongoDbKey, {
           }
           case '🛑': {
             const ticket = IS_REPLAY_POOL[msgReact.message.id];
+            delete IS_REPLAY_POOL[msgReact.message.id];
             clearTTimeout(ticket);
             DATA_FLOW[getRecipId(msgReact)].abort().rejectAll('Not a replay').remove();
             await msgReact.message.channel.send(isNotSC2Replay);
@@ -57,7 +59,6 @@ mongoose.connect(mongoDbKey, {
           default:
             return badEmoji(msgReact);
         }
-        delete IS_REPLAY_POOL[msgReact.message.id];
         return;
       }
       case 'DATA_VALIDATION_POOL': {
@@ -79,6 +80,7 @@ mongoose.connect(mongoDbKey, {
           ['race', 'rank', 'vsRace']
         );
         if (hasAllEmojies) {
+          delete DATA_VALIDATION_POOL[msgReact.message.id];
           clearTTimeout(ticket);
           ticket.timedOut = false;
           Object.freeze(ticket);

@@ -60,6 +60,7 @@ export const emojiFromMsgReact = msgReact =>
  * @returns {string | false} */
 export const getActualGroup = (msgReact, pool) => {
   const emoji = emojiFromMsgReact(msgReact);
+  if (!emojiInteractions[pool.name]) return false;
   const groups = Object.keys(emojiInteractions[pool.name]);
   let result = false;
   for (let group of groups) {

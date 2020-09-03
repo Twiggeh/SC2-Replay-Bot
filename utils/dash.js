@@ -284,11 +284,8 @@ export const finishedCoachingStudent = async (dTicket, msgReact) => {
   const coachDm = qTicket.coach.dmChannel;
 
   // Ask user whether coaching has succeeded.
-  const answer = await qTicket.student.send(successfulCoaching);
-  await answer.react('✅');
-  await answer.react('🛑');
-  // TODO: make this and the other binary choice operators work the same as the datavalidation queue
 
+  const answer = await qTicket.student.send(successfulCoaching);
   /** @type {import('./ticket.js').CL_Ticket} */
   const options = {
     id: answer.id,
@@ -298,6 +295,9 @@ export const finishedCoachingStudent = async (dTicket, msgReact) => {
     studentQTicketID: dTicket.studentQTicketID,
   };
   await buildTicket(COACHLOG_POOL, options);
+
+  await answer.react('✅');
+  await answer.react('🛑');
 
   // Unset the coach in dbQueue, the coach in QUEUE_POOL will be unset after the logging is complete
   // AKA when the student clicks on the check / the octagonal sign to finish the session.

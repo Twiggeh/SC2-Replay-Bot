@@ -96,8 +96,9 @@ export const handleConfIsReplay = async (isReplay, msg, url) => {
     DATA_FLOW[msg.author.id].resolveInd(0);
     return;
   }
-  let answer;
-  answer = await sendConfirmIsReplay(msg);
+
+  const answer = await msg.author.send(confirmIsReplayMsg);
+
   buildTicket(IS_REPLAY_POOL, {
     id: answer.id,
     content: msg.content,
@@ -105,6 +106,9 @@ export const handleConfIsReplay = async (isReplay, msg, url) => {
     origMsg: msg,
     attachArr: msg.attachments,
   });
+
+  await answer.react('✅');
+  await answer.react('🛑');
 };
 
 // TODO : Add available coaches as a parameter to SC2Replay and handleConfirmation
