@@ -105,7 +105,7 @@ export const createLock = () => {
 /**@param {boolean} isReplay
  * @param {Message} msg
  * @param {string} url
- * @returns {Lock} */
+ */
 export const handleConfIsReplay = async (isReplay, msg, url) => {
   if (isReplay) {
     DATA_FLOW[msg.author.id].resolveInd(0);
@@ -121,10 +121,9 @@ export const handleConfIsReplay = async (isReplay, msg, url) => {
     origMsg: msg,
     attachArr: msg.attachments,
   });
-  rpTicket.delMsgPool.push(answer.id);
-
   await answer.react('✅');
   await answer.react('🛑');
+  return rpTicket;
 };
 
 // TODO : Add available coaches as a parameter to SC2Replay and handleConfirmation
@@ -133,6 +132,7 @@ export const handleConfirmation = async msg => {
   const answer = await msg.author.send(isSC2Replay(1));
   await sleep(10 * 1000);
   await delAllMsgs({ UserIDs: msg.author.id }, { ticket: { delMsgPool: [answer.id] } });
+  return answer;
 };
 
 /**
@@ -255,6 +255,7 @@ export const handleMissingData = async (msg, playingAgainst, playingAs, rank, ur
   for (let action of actions) {
     await action(answer);
   }
+  return answer;
 };
 
 // TODO : Replace with real Coach provider

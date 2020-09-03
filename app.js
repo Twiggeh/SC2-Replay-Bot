@@ -157,14 +157,30 @@ mongoose.connect(mongoDbKey, {
     if (!shouldHandleMsg(msg)) return;
     const [hasReplay, url] = getMsgAttachments(msg);
     const { playingAgainst, playingAs, rank, replay } = whichDataPresent(msg);
+    const msgIds = [];
     if (!hasReplay) return;
     try {
       const aborted = await newInterruptRunner({
         dataFlowId: msg.author.id,
         actions: [
-          () => handleConfIsReplay(replay, msg, url),
-          () => handleMissingData(msg, playingAgainst, playingAs, rank, url),
-          () => handleConfirmation(msg),
+          async () => {
+            const answer = await handleConfIsReplay(replay, msg, url);
+            msgIds.push(answer.id);
+          },
+          async () => {
+            const answer = await handleMissingData(
+              msg,
+              playingAgainst,
+              playingAs,
+              rank,
+              url
+            );
+            msgIds.push(answer.id);
+          },
+          async () => {
+            const answer = await handleConfirmation(msg);
+            msgIds.push(answer.id);
+          },
         ],
       });
       if (aborted) return;
@@ -172,6 +188,7 @@ mongoose.connect(mongoDbKey, {
     } catch (e) {
       console.error(new Error(e));
     }
+    delAllMsgs({ UserIDs: msg.author.id }, { ticket: { delMsgPool: msgIds } });
   });
 })();
 

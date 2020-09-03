@@ -54,7 +54,6 @@ export const getDashboard = async discordCoach => {
     delete DASHBOARD_POOL[existingDash.id];
   }
   await buildTicket(DASHBOARD_POOL, opts);
-  console.log(QUEUE_POOL);
   return dashboard;
 };
 
@@ -257,6 +256,7 @@ export const selectStudent = async (dashT, emoji, msgReact) => {
   const [{ value: queuePoolEntry }, { value: answer }] = result;
   dashT.delMsgPool.push(answer.id); // TODO : make sure that in finishedCoaching student the dashboard is passed.
 
+  POOLS['DASHBOARD_POOL'][dashT.id] = dashT;
   queuePoolEntry.coachID = msgReact.message.channel.recipient.id;
   queuePoolEntry.startedCoaching = Date.now();
   await queuePoolEntry.save();
@@ -302,7 +302,12 @@ export const finishedCoachingStudent = async (dTicket, msgReact) => {
   await qPoolEntry.save();
   await sleep(5000);
 
-  delAllMsgs({ DMChannels: coachDm }, { ticket: clTicket });
+  console.log(POOLS);
+
+  delAllMsgs(
+    { DMChannels: coachDm },
+    { ticket: { delMsgPool: [...clTicket.delMsgPool, ...dTicket.delMsgPool] } }
+  );
 
   console.log('Finished Coaching');
 };
@@ -316,4 +321,4 @@ import { Message, User as DiscordUser } from 'discord.js';
 import { DASHBOARD_POOL, QUEUE_POOL, COACHLOG_POOL } from '../init.js';
 import { buildTicket } from './ticket.js';
 import Queue_PoolEntry from '../Models/Queue_Pool.js';
-import { updateQueuePool } from './pool.js';
+import { updateQueuePool, POOLS } from './pool.js';
