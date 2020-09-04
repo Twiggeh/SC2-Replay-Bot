@@ -84,12 +84,7 @@ const updateDashboards = async discordCoaches => {
 
 export const updateAllDashboards = async () => {
   // TODO PUT INTO A PROVIDER
-  const allCoaches = [
-    '145856913014259712',
-    '177517201023172609',
-    '143880207730737152',
-    '231797256326610946',
-  ];
+  const allCoaches = ['145856913014259712', '177517201023172609'];
   const cache = [];
 
   allCoaches.forEach(id => cache.push(client.users.fetch(id)));
@@ -239,11 +234,11 @@ export const selectStudent = async (dashT, emoji, msgReact) => {
   }
   /** @type {import('./ticket.js').Q_Ticket} */
   const qTicket = QUEUE_POOL[QUEUE_KEYS[index]];
+  if (!qTicket)
+    return console.log("Coach tried to select a emoji that doesn't have a student on it");
 
   qTicket.beingCoached = true;
 
-  if (!qTicket)
-    return console.log("Coach tried to select a emoji that doesn't have a student on it");
   // don't allow other coaches to select this student
   if (qTicket.coach) return console.log('Already being coached');
 
@@ -284,8 +279,7 @@ export const finishedCoachingStudent = async (dTicket, msgReact) => {
   const qTicket = QUEUE_POOL[dTicket.studentQTicketID];
   if (!qTicket?.student) return console.log('No student to uncoach');
 
-  qTicket.beingCoached = false;
-  // local reference, because a student might be faster than this function (handleAfterCoachInter runs before this code then )
+  delete QUEUE_POOL[qTicket.id];
   const coachDm = qTicket.coach.dmChannel;
 
   // Ask user whether coaching has succeeded.
