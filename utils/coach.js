@@ -36,13 +36,8 @@ export const isCoachCmd = msg => {
     ._roles;
   // TODO : remove webdev
   const isCoach =
-    includesAnyArr(userRoles, allCoachIds) |
-    includesAnyArr(
-      '598891772499984394',
-      '143880207730737152',
-      '231797256326610946',
-      userRoles
-    );
+    includesAnyArr(userRoles, coachRoles) &&
+    includesAny(msg.author.id, ['145856913014259712']);
   result &= isCoach;
   const hasRunner = msg.content.charAt(0) === CCMDDISCR;
   result &= hasRunner;
@@ -204,9 +199,9 @@ export const createCoaches = async coachIds => {
   // await putAllReactsOnDashes(dashes);
 };
 
-import { delAllMsgs, includesAnyArr, getStrUTCDay } from './utils.js';
+import { delAllMsgs, includesAnyArr, getStrUTCDay, includesAny } from './utils.js';
 import Coach, { availSchema } from '../Models/Coach.js';
-import { allCoachIds } from '../provider/provider.js';
+import { coachRoles } from '../provider/provider.js';
 import { getDashboards, getDashboard } from './dash.js';
 import { Message } from 'discord.js';
 import { DASHBOARD_POOL, QUEUE_POOL } from '../init.js';

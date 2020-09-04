@@ -10,12 +10,15 @@ const zergQuery = ['ZergCoach', '556487007535366174'];
 const tossQuery = ['TossCoach', '556487013818302464'];
 const terQuery = ['TerCoach', '556487011066707968'];
 const coachQuery = ['Coach', '546799895840030736', 'AspiringCoach', '552128337766514690'];
-export const allCoachIds = [
+export const coachRoles = [
+  // TODO : put into provider
   '556487007535366174',
   '556487013818302464',
   '556487011066707968',
   '546799895840030736',
   '552128337766514690',
+  '598891772499984394', // this is webdev role
+  '641682841335496726', // this is the admin role
 ];
 
 export const getCoaches = async (
