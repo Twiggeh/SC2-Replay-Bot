@@ -78,19 +78,14 @@ export const lockEmojiInter = async (msgReact, ticket) => {
 };
 
 /**@param {string}          group
- * @param {AllTickets}      ticket
+ * @param {import('./ticket.js').AllTicket_Out}      ticket
  * @param {MessageReaction} msgReact */
 export const lockEmojiInterWGroup = async (group, ticket, msgReact) => {
   const emoji = emojiFromMsgReact(msgReact);
   const groupIndex = ticket.lockedEmojiInteractionGroups.indexOf(group);
   if (groupIndex !== -1) return console.error(`Group (${group}) already locked down.`);
   ticket.lockedEmojiInteractionGroups.push(group);
-  if (
-    emojiInteractions[ticket.pool.name][group]?.onAdd[Symbol.toStringTag] ===
-    'AsyncFunction'
-  )
-    await emojiInteractions[ticket.pool.name][group]?.onAdd(ticket, emoji, msgReact);
-  else emojiInteractions[ticket.pool.name][group]?.onAdd(ticket, emoji, msgReact);
+  await emojiInteractions[ticket.pool.name][group]?.onAdd?.(ticket, emoji, msgReact);
 };
 
 /**@param {AllTickets}      ticket
@@ -138,7 +133,7 @@ export const isLocked = (msgReact, pool) => {
 };
 
 /** @param {MessageReaction} msgReact
- * @param {Pool} pool
+ * @param {import('./pool.js').Pool.name} poolName
  * @param {string | false} group
  * @returns {boolean} */
 export const isLockedwGroup = (msgReact, pool, group) => {
