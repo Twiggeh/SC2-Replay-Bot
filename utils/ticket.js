@@ -159,8 +159,8 @@ export const timeOutHandler = async (ticket, system) => {
             await clTicket.qTicket.student.send(timeoutThankYou(cltOpts.studentName));
             cleanUpAfterCoaching(clTicket, cltOpts);
           },
-          sleep(5000),
-          delAllMsgs({ UserIDs: cltOpts.studentID }),
+          () => sleep(5000),
+          () => delAllMsgs({ UserIDs: cltOpts.studentID }),
         ],
       });
       return;
