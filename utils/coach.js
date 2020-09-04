@@ -37,7 +37,12 @@ export const isCoachCmd = msg => {
   // TODO : remove webdev
   const isCoach =
     includesAnyArr(userRoles, allCoachIds) |
-    includesAnyArr('598891772499984394', userRoles);
+    includesAnyArr(
+      '598891772499984394',
+      '143880207730737152',
+      '231797256326610946',
+      userRoles
+    );
   result &= isCoach;
   const hasRunner = msg.content.charAt(0) === CCMDDISCR;
   result &= hasRunner;

@@ -99,6 +99,7 @@ mongoose.connect(mongoDbKey, {
             },
             true
           );
+          updateQueuePool();
           DATA_FLOW[getRecipId(msgReact)].resolveAll();
 
           console.log('all emojies were received.');
@@ -211,7 +212,7 @@ import {
 import { whichDataPresent, getMsgAttachments, buildTicket } from './utils/ticket.js';
 import { newInterruptRunner } from './utils/interruptRunner.js';
 import { handleConfigCoach, isCoachCmd } from './utils/coach.js';
-import { isPartOfPool, POOLS } from './utils/pool.js';
+import { isPartOfPool, POOLS, updateQueuePool } from './utils/pool.js';
 import { DATA_FLOW } from './provider/dataFlow.js';
 import { allEmojis, DashEmojis } from './Emojis.js';
 import { isNotSC2Replay } from './messages.js';

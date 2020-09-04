@@ -242,7 +242,12 @@ export const handleMissingData = async (msg, playingAgainst, playingAs, rank, ur
 
 // TODO : Replace with real Coach provider
 
-const coachIds = ['145856913014259712', '177517201023172609'];
+const coachIds = [
+  '145856913014259712',
+  '177517201023172609',
+  '143880207730737152',
+  '231797256326610946',
+];
 
 /**@param {DV_Ticket} ticket
  * @return {Promise<void>} */

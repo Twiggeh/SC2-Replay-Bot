@@ -84,7 +84,12 @@ const updateDashboards = async discordCoaches => {
 
 export const updateAllDashboards = async () => {
   // TODO PUT INTO A PROVIDER
-  const allCoaches = ['145856913014259712', '177517201023172609'];
+  const allCoaches = [
+    '145856913014259712',
+    '177517201023172609',
+    '143880207730737152',
+    '231797256326610946',
+  ];
   const cache = [];
 
   allCoaches.forEach(id => cache.push(client.users.fetch(id)));
