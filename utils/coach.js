@@ -141,24 +141,31 @@ export const handleConfigCoach = async msg => {
       return;
     }
     case `${CCMDDISCR}stopcoaching`: {
-      const dash = await getDashboard(msg.author);
-      if (!dash) return console.log('User did not have the right permissions');
-      const DASHBOARD_POOL_KEYS = Object.keys(DASHBOARD_POOL);
-
-      let coachDashTicket;
-      for (let i = 0; i < DASHBOARD_POOL_KEYS.length; i++) {
-        /** @type {import('./ticket.js').D_Ticket} */
-        const dTicket = DASHBOARD_POOL[DASHBOARD_POOL_KEYS[i]];
-        if (dTicket.coachID === msg.author.id) coachDashTicket = dTicket;
-      }
-
-      await freeEmojiInterWGroup('selectStudent', coachDashTicket);
+      const [dTicket] = await getDashTicket(msg.author);
+      if (!dTicket) return;
+      await freeEmojiInterWGroup('selectStudent', dTicket);
       return;
     }
-    case `${CCMDDISCR}startCoaching`: {
-      console.log(
-        'TODO : Create a method that will start coaching the student behind the id of rawmsg[1] '
+    case `${CCMDDISCR}startcoaching`: {
+      const studentIndex = rawCommand[1];
+      if (studentIndex === undefined || studentIndex * 1 < 6 || studentIndex * 1 < 1)
+        return console.log(`bad number ${rawCommand[1]}`);
+      const [dTicket, dashMessage] = await getDashTicket(msg.author);
+      if (!dTicket) return;
+      const msgReact = new MessageReaction(
+        client,
+        {
+          emoji: {
+            deleted: false,
+            id: null,
+            identifier: '%F0%9F%8C%B6%EF%B8%8F',
+            name: '🌶️',
+          },
+        },
+        dashMessage
       );
+      msgReact._emoji.name = studentIndex;
+      lockEmojiInterWGroup('selectStudent', dTicket, msgReact);
       return;
     }
     case `${CCMDDISCR}deletereplay`: {
@@ -202,8 +209,10 @@ export const createCoaches = async coachIds => {
 import { delAllMsgs, includesAnyArr, getStrUTCDay, includesAny } from './utils.js';
 import Coach, { availSchema } from '../Models/Coach.js';
 import { coachRoles } from '../provider/provider.js';
-import { getDashboards, getDashboard } from './dash.js';
-import { Message } from 'discord.js';
+import { getDashboards, getDashboard, getDashTicket } from './dash.js';
+import { Message, MessageReaction, ReactionEmoji } from 'discord.js';
 import { DASHBOARD_POOL, QUEUE_POOL } from '../init.js';
-import { freeEmojiInterWGroup } from './emojiInteraction.js';
+import { freeEmojiInterWGroup, lockEmojiInterWGroup } from './emojiInteraction.js';
 import { cleanUpAfterCoaching } from './coachlog.js';
+import { studentMessage } from '../messages.js';
+import { client } from '../app.js';

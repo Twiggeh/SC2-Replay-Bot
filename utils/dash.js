@@ -57,7 +57,6 @@ export const getDashboard = async discordCoach => {
     delete DASHBOARD_POOL[existingDash.id];
   }
   await buildTicket(DASHBOARD_POOL, opts);
-  console.log(QUEUE_POOL);
   return dashboard;
 };
 
@@ -226,7 +225,8 @@ export const selectStudent = async (dashT, emoji, msgReact) => {
   //
 
   const QUEUE_KEYS = Object.keys(QUEUE_POOL);
-  const numIdent = emojiIdent[emoji].id;
+  const numIdent =
+    emojiIdent?.[emoji]?.id === undefined ? Number(emoji) : emojiIdent?.[emoji]?.id;
 
   let index = -1;
   for (let i = 0; i < QUEUE_KEYS.length; i++) {
@@ -309,6 +309,26 @@ export const finishedCoachingStudent = async (dTicket, msgReact) => {
   delAllMsgs({ DMChannels: coachDm });
 
   console.log('Finished Coaching');
+};
+
+/**
+ * @param {DiscordUser} coach
+ * @returns {Promise<[import('./ticket.js').D_Ticket, Message] | false>}
+ */
+export const getDashTicket = async coach => {
+  const dash = await getDashboard(coach);
+  if (!dash) {
+    console.log('User did not have the right permissions');
+    return false;
+  }
+  let dashTicketOfCoach = false;
+  const DASHBOARD_POOL_KEYS = Object.keys(DASHBOARD_POOL);
+  for (let i = 0; i < DASHBOARD_POOL_KEYS.length; i++) {
+    /** @type {import('./ticket.js').D_Ticket} */
+    const dTicket = DASHBOARD_POOL[DASHBOARD_POOL_KEYS[i]];
+    if (dTicket.coachID === coach.id) dashTicketOfCoach = dTicket;
+  }
+  return [dashTicketOfCoach, dash];
 };
 
 import { dashboardMessage, successfulCoaching, studentMessage } from '../messages.js';
