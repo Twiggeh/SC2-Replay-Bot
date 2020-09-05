@@ -115,6 +115,8 @@ export const handleConfIsReplay = async (isReplay, msg, url) => {
 /** @param {Message} msg*/
 export const handleConfirmation = async msg => {
   await msg.author.send(isSC2Replay(1));
+  updateQueuePool();
+  updateAllDashboards();
   await sleep(10 * 1000);
   await delAllMsgs({ UserIDs: msg.author.id });
 };
@@ -242,12 +244,7 @@ export const handleMissingData = async (msg, playingAgainst, playingAs, rank, ur
 
 // TODO : Replace with real Coach provider
 
-const coachIds = [
-  '145856913014259712',
-  '177517201023172609',
-  '143880207730737152',
-  '231797256326610946',
-];
+const coachIds = ['145856913014259712', '177517201023172609'];
 
 /**@param {DV_Ticket} ticket
  * @return {Promise<void>} */
