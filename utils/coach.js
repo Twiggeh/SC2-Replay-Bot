@@ -193,6 +193,28 @@ export const handleConfigCoach = async msg => {
       });
       return;
     }
+    case `${CCMDDISCR}printpools`: {
+      const safeStringify = (obj, indent = 2) => {
+        let cache = [];
+        const retVal = JSON.stringify(
+          obj,
+          (key, value) =>
+            typeof value === 'object' && value !== null
+              ? cache.includes(value)
+                ? undefined // Duplicate reference found, discard key
+                : cache.push(value) && value // Store value in our collection
+              : value,
+          indent
+        );
+        cache = null;
+        return retVal;
+      };
+      await fs.writeFile('./POOLS', safeStringify(POOLS));
+      const answer = await msg.author.send('Wrote data');
+      await sleep(2 * 1000);
+      answer.delete();
+      return;
+    }
     default: {
       // TODO: throw bad command at coach
       console.log('bad command');
@@ -206,7 +228,7 @@ export const createCoaches = async coachIds => {
   // await putAllReactsOnDashes(dashes);
 };
 
-import { delAllMsgs, includesAnyArr, getStrUTCDay, includesAny } from './utils.js';
+import { delAllMsgs, includesAnyArr, getStrUTCDay, includesAny, sleep } from './utils.js';
 import Coach, { availSchema } from '../Models/Coach.js';
 import { coachRoles } from '../provider/provider.js';
 import { getDashboards, getDashboard, getDashTicket } from './dash.js';
@@ -216,3 +238,5 @@ import { freeEmojiInterWGroup, lockEmojiInterWGroup } from './emojiInteraction.j
 import { cleanUpAfterCoaching } from './coachlog.js';
 import { studentMessage } from '../messages.js';
 import { client } from '../app.js';
+import { promises as fs } from 'fs';
+import { POOLS } from './pool.js';
