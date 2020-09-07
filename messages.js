@@ -278,7 +278,7 @@ Have a wonderful day :D`,
  */
 export const queueRecycle = clTicketOpts => {
   return {
-    content: `**Your request for coaching, ${clTicketOpts.studentName}, has been forwarded again to our wonderful coaches.
+    content: `**Your request for coaching, ${clTicketOpts.studentName}, has been forwarded again to our wonderful coaches.**
 (${clTicketOpts.race} ${clTicketOpts.vsRace}, ${clTicketOpts.rank})
 
 Have a wonderful day :D`,
@@ -295,6 +295,36 @@ export const timeoutThankYou = userName => {
 We will assume that the coaching experience was satisfactory.
 Have a wonderful day :D`,
   };
+};
+
+export const description = {
+  content: `**Would you please provide a small description of the game?**
+_This would help our coaches tremendously_
+
+**What did you try to go for?**
+Example : _"211 fast tank attack"_
+
+**What did the opponent try to go for?**
+Example: _"mine drop into +1 marine-marauder-tank push into the third"_`,
+};
+
+export const thankYouDesc = {
+  content: `**Our coaches really appreciate this, you have their gratitude**
+
+You have 5 mins to write a message. As soon as you send the description in this chat it will be sent to our coaches along your replay.`,
+};
+
+export const okayNoDescription = {
+  content: `**Our coaches really appreciate descriptions!**
+It shows that you have put time and effort into selecting your replay, to get the most out of the coaching experience.`,
+};
+
+export const descReminder = {
+  content: 'You have not specified whether you want to provide a description.',
+};
+
+export const descTimeout = {
+  content: `You haven't provided a description. Your request will be sent without a description.`,
 };
 
 import { User as DiscordUser, MessageReaction } from 'discord.js';

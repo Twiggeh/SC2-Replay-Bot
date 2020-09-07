@@ -80,31 +80,22 @@ mongoose.connect(mongoDbKey, {
           ['race', 'rank', 'vsRace']
         );
         if (hasAllEmojies) {
-          delete DATA_VALIDATION_POOL[msgReact.message.id];
+          // TODO : Add datavalidation pool deletion to everywhere a buildticket queuepool is called
           clearTTimeout(ticket);
           ticket.timedOut = false;
           Object.freeze(ticket);
-          await buildTicket(
-            QUEUE_POOL,
-            {
-              id: ticket.id,
-              activatedAt: ticket.activatedAt,
-              content: ticket.content,
-              attachArr: ticket.attachArr,
-              race: ticket.race,
-              rank: ticket.rank,
-              vsRace: ticket.vsRace,
-              student: ticket.origMsg.author,
-              url: ticket.url,
-            },
-            true
-          );
-          updateQueuePool();
-          DATA_FLOW[getRecipId(msgReact)].resolveAll();
-
+          DATA_FLOW[getRecipId(msgReact)].resolveInd(1);
           console.log('all emojies were received.');
         }
         // TODO : Has to have max time that the timeout can be extended.
+        return;
+      }
+      case 'DESCRIPTION_POOL': {
+        const allowedEmojis = ['✅', '🛑'];
+        if (!allowedEmojis.includes(emojiFromMsgReact(msgReact)))
+          return badEmoji(msgReact);
+        clearTTimeout(DESCRIPTION_POOL[msgReact.message.id]);
+        await lockEmojiInter(msgReact, DESCRIPTION_POOL[msgReact.message.id]);
         return;
       }
       case 'DASHBOARD_POOL': {
@@ -166,6 +157,7 @@ mongoose.connect(mongoDbKey, {
         actions: [
           () => handleConfIsReplay(replay, msg, url),
           () => handleMissingData(msg, playingAgainst, playingAs, rank, url),
+          () => handleDescription(msg),
           () => handleConfirmation(msg),
         ],
       });
@@ -183,6 +175,7 @@ import init, {
   IS_REPLAY_POOL,
   DASHBOARD_POOL,
   COACHLOG_POOL,
+  DESCRIPTION_POOL,
 } from './init.js';
 import mongoose from 'mongoose';
 import Discord from 'discord.js';
@@ -208,6 +201,7 @@ import {
   sleep,
   badEmoji,
   shouldHandleReact,
+  handleDescription,
 } from './utils/utils.js';
 import { whichDataPresent, getMsgAttachments, buildTicket } from './utils/ticket.js';
 import { newInterruptRunner } from './utils/interruptRunner.js';

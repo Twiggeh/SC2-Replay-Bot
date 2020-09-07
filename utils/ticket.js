@@ -29,7 +29,7 @@
  * @prop {number} emojiIdentifier - The emojiIdentifier of the QT_Ticket (The Emoji to use to select a user)
  * @typedef {T_FactoryOptions & QT_Opts} QT_FactoryOptions */
 
-/**@typedef {T_FactoryOptions & QT_FactoryOptions & DVT_FactoryOptions | D_Ticket} AllTicket_FactoryOptions */
+/**@typedef {T_FactoryOptions & QT_FactoryOptions & DVT_FactoryOptions | D_Ticket | DES_Ticket} AllTicket_FactoryOptions */
 
 /**@typedef {Object} Ticket
  * @prop {string}  id        - Message ID
@@ -90,8 +90,16 @@
  * @prop {boolean} [timedOut=false] - If the ticket has timed out
  */
 
+/**
+ * @typedef {Object} DES_Ticket
+ * @prop {string} id - ID of the Description Message.
+ * @prop {User} student - The students User object.
+ * @prop {boolean} timedOut - Whether the ticket has timed out.
+ * @prop {Array} lockedEmojiInteractionGroups - Locked Interactions of the DescriptionTicket
+ */
+
 /**@typedef AllTicket_Out
- * @type { CL_Ticket | D_Ticket | Ticket_Out | DV_Ticket & T_Out | IR_Ticket & T_Out | Q_Ticket & T_Out} */
+ * @type { CL_Ticket | D_Ticket | Ticket_Out | DV_Ticket & T_Out | IR_Ticket & T_Out | Q_Ticket & T_Out | DES_Ticket} */
 
 export const timeOutHandler = async (ticket, system) => {
   console.log('timedout');
@@ -129,6 +137,25 @@ export const timeOutHandler = async (ticket, system) => {
       DATA_FLOW[ticket.origMsg.author.id].abort().rejectAll().remove();
       await sleep(15 * 1000);
       await delAllMsgs({ UserIDs: ticket.origMsg.author.id });
+      return;
+    }
+    case 'DESCRIPTION_POOL': {
+      /** @type {DES_Ticket} */
+      const desTicket = ticket;
+      const aborted = await newInterruptRunner({
+        abortPath: 'timedOut',
+        abortPtr: desTicket,
+        negatePtr: true,
+        actions: [
+          () => desTicket.student.send(descReminder),
+          () => sleep(60 * 1000),
+          () => desTicket.student.send(descTimeout),
+        ],
+      });
+      if (aborted) return;
+      DATA_FLOW[desTicket.student.id].abort().rejectAll().remove();
+      await sleep(20 * 1000);
+      await delAllMsgs({ UserIDs: desTicket.student.id });
       return;
     }
     case 'QUEUE_POOL': {
@@ -184,6 +211,8 @@ export const getTicketTimeout = pool => {
     case 'DASHBOARD_POOL':
       return 0;
     case 'COACHLOG_POOL':
+      return 60 * 1000;
+    case 'DESCRIPTION_POOL':
       return 60 * 1000;
     default:
       console.error(`Wrong name provided (${pool.name})`);
@@ -291,7 +320,6 @@ export const ticketFactory = async (
       return result;
     }
     case 'DASHBOARD_POOL': {
-      if (!startedCoaching || !studentQTicketID) console.log('break');
       if ((!startedCoaching || !studentQTicketID) && id && DASHBOARD_POOL[id])
         return DASHBOARD_POOL[id];
 
@@ -312,6 +340,14 @@ export const ticketFactory = async (
         studentQTicketID,
         dTicket,
         qTicket,
+      };
+    }
+    case 'DESCRIPTION_POOL': {
+      return {
+        id,
+        student,
+        timedOut: false,
+        lockedEmojiInteractionGroups: [],
       };
     }
     default:
@@ -406,6 +442,8 @@ import {
   isSC2Fail,
   isSC2ReplayReminder,
   timeoutThankYou,
+  descReminder,
+  descTimeout,
 } from '../messages.js';
 import { sleep, delAllMsgs, includesAny } from './utils.js';
 import { DATA_FLOW } from '../provider/dataFlow.js';
@@ -424,12 +462,10 @@ import {
   dRankCuts,
 } from '../config/global.js';
 import Queue_PoolEntry from '../Models/Queue_Pool.js';
-import { User } from 'discord.js';
-import { DASHBOARD_POOL, QUEUE_POOL, COACHLOG_POOL } from '../init.js';
+import { User, Message } from 'discord.js';
+import { DASHBOARD_POOL } from '../init.js';
 import {
   createCLTOpts,
   successAfterCoachingInter,
   cleanUpAfterCoaching,
 } from './coachlog.js';
-import { updateAllDashboards } from './dash.js';
-import CoachLogEntry from '../Models/CoachLog.js';

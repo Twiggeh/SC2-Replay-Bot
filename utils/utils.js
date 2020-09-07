@@ -207,21 +207,38 @@ You can omit this error message by specifying your rank with:
  * @param {string}     url*/
 export const handleMissingData = async (msg, playingAgainst, playingAs, rank, url) => {
   if (playingAgainst && playingAs && rank && url) {
-    await buildTicket(
-      QUEUE_POOL,
-      {
-        id: msg.id,
-        activatedAt: Date.now(),
-        content: msg.content,
-        attachArr: msg.attachArr,
-        race: playingAs,
-        rank,
-        vsRace: playingAgainst,
-        student: msg.author,
-        url,
-      },
-      true
-    );
+    const [enoughDesc, actualContent] = getActualContent(msg);
+    if (enoughDesc) {
+      await buildTicket(
+        QUEUE_POOL,
+        {
+          id: msg.id,
+          activatedAt: Date.now(),
+          content: actualContent,
+          attachArr: msg.attachArr,
+          race: playingAs,
+          rank,
+          vsRace: playingAgainst,
+          student: msg.author,
+          url,
+        },
+        true
+      );
+      DATA_FLOW[msg.author.id].resolveInd(1);
+      return;
+    }
+    // create a "fake ticket" so that the description collector can access the data
+    const ticket = await buildTicket(DATA_VALIDATION_POOL, {
+      attachArr: msg.attachments,
+      id: Math.floor(Math.random() * 1000000000) + '',
+      content: msg.content,
+      url,
+      origMsg: msg,
+      rank,
+      race: playingAs,
+      vsRace: playingAgainst,
+    });
+    clearTTimeout(ticket);
     DATA_FLOW[msg.author.id].resolveInd(1);
     console.log('all emojies were received.');
     return;
@@ -244,13 +261,47 @@ export const handleMissingData = async (msg, playingAgainst, playingAs, rank, ur
 
 // TODO : Replace with real Coach provider
 
-const coachIds = ['145856913014259712', '177517201023172609'];
+const coachIds = ['145856913014259712'];
 
 /**@param {DV_Ticket} ticket
  * @return {Promise<void>} */
 export const handlePushToCoaches = async () => {
   updateQueuePool();
   await updateAllDashboards();
+};
+
+/**
+ * @param {Message} msg - The message to extract the actual content from
+ * @returns {[boolean, string]} - If the content is sufficient, and the extracted actual content
+ * */
+export const getActualContent = msg => {
+  const trimmedContent = msg.content.trim();
+  const firstBracket = trimmedContent.indexOf('[');
+  const lastBracket = trimmedContent.lastIndexOf(']');
+  const actualContent =
+    trimmedContent.slice(0, firstBracket) +
+    trimmedContent.slice(lastBracket, trimmedContent.length - 1);
+  return [actualContent.length > 10, actualContent];
+};
+
+/**
+ * @param {Message} msg - The message sent in the Discord Server (Original coach request)
+ */
+export const handleDescription = async msg => {
+  const [isDesc] = getActualContent(msg);
+  if (isDesc) {
+    DATA_FLOW[msg.author.id].resolveAll();
+    return console.log('Message contained a description');
+  }
+  const answer = await msg.author.send(description);
+  /** @type {import('./ticket.js').DES_Ticket} */
+  await buildTicket(DESCRIPTION_POOL, {
+    id: answer.id,
+    student: msg.author,
+  });
+
+  await answer.react('✅');
+  await answer.react('🛑');
 };
 
 /**
@@ -322,12 +373,22 @@ export const badEmoji = msgReact =>
   console.log('User tried to provide wrong emote : ' + emojiFromMsgReact(msgReact));
 
 import { updateAllDashboards, date } from './dash.js';
-import { confirmIsReplayMsg, missingDataError, isSC2Replay } from '../messages.js';
+import {
+  confirmIsReplayMsg,
+  missingDataError,
+  isSC2Replay,
+  description,
+} from '../messages.js';
 import { User, Message, DMChannel, MessageReaction } from 'discord.js';
 import { client } from '../app.js';
 import { DATA_FLOW } from '../provider/dataFlow.js';
 import { buildTicket } from './ticket.js';
-import { DATA_VALIDATION_POOL, QUEUE_POOL, IS_REPLAY_POOL } from '../init.js';
+import {
+  DATA_VALIDATION_POOL,
+  QUEUE_POOL,
+  IS_REPLAY_POOL,
+  DESCRIPTION_POOL,
+} from '../init.js';
 import { vsRaceEmojis, raceEmojis, rankEmojis } from '../Emojis.js';
 import {
   tShortcuts,

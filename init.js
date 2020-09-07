@@ -1,9 +1,4 @@
-const allCoachIds = [
-  '145856913014259712',
-  '177517201023172609',
-  '143880207730737152',
-  '231797256326610946',
-];
+const allCoachIds = ['145856913014259712'];
 // TODO : Put into provider
 const MAX_TIMEOUT_QUEUE_POOL = 30 * 60 * 1000;
 
@@ -18,6 +13,8 @@ export const QUEUE_POOL = createPool('QUEUE_POOL');
 export const DASHBOARD_POOL = createPool('DASHBOARD_POOL');
 /** @type {Object.<string, import('./utils/ticket.js').CL_Ticket>} */
 export const COACHLOG_POOL = createPool('COACHLOG_POOL');
+/** @type {Object.<string, import('./utils/ticket.js').DES_Ticket>} */
+export const DESCRIPTION_POOL = createPool('DESCRIPTION_POOL');
 
 // EMOJI INTERACTIONS
 
@@ -73,6 +70,10 @@ registerEmojiInteraction(COACHLOG_POOL, {
     emojis: ['✅', '🛑'],
     onAdd: handleAfterCoachingInter,
   },
+});
+
+registerEmojiInteraction(DESCRIPTION_POOL, {
+  binaryAction: { emojis: ['✅', '🛑'], onAdd: handleAddDesc },
 });
 
 const init = async () => {
@@ -175,5 +176,6 @@ import Queue_PoolEntry from './Models/Queue_Pool.js';
 import Discord, { Message } from 'discord.js';
 import { client } from './app.js';
 import { handleAfterCoachingInter } from './utils/coachlog.js';
+import { handleAddDesc } from './utils/description.js';
 
 export default init;

@@ -1,6 +1,6 @@
 /**@typedef Pool
- * @type {Object.<string, Tickets>}
- * @type {string} name Name of the pool (on proto) */
+ * @type {Object.<string, import('./ticket.js').AllTicket_Out>}
+ * @prop {string} name Name of the pool (on proto) */
 // TODO : Refactor into provider (Pools Provider)
 /**  @type {Object<string, Pool> } */
 export const POOLS = {};
