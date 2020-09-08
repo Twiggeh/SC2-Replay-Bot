@@ -69,6 +69,7 @@
  * @prop {number} emojiIdentifier - EmojiNumber that is going to allow the coach to pull the user.
  * @prop {number} startedCoaching - Date.now() of when the student started to be coached
  * @prop {boolean} beingCoached - If the ticket is being coached right now.
+ * @prop {boolean} pendingDeletion - If the student still needs to react to the satisfied message.
  * @typedef {Ticket & Q} Q_Ticket */
 
 /**@typedef {Object} D_Ticket
@@ -300,6 +301,7 @@ export const ticketFactory = async (
         student,
         emojiIdentifier,
         startedCoaching,
+        pendingDeletion: false,
       };
       if (saveToDB) {
         const queuePoolEntry = new Queue_PoolEntry({

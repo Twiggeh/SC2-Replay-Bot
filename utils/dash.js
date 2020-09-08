@@ -236,6 +236,10 @@ export const selectStudent = async (dashT, emoji, msgReact) => {
   const qTicket = QUEUE_POOL[QUEUE_KEYS[index]];
   if (!qTicket)
     return console.log("Coach tried to select a emoji that doesn't have a student on it");
+  if (qTicket.pendingDeletion)
+    return console.log(
+      'Student has not selected whether the coaching experience was satisfactory. Did not proceed with `selectStudent`'
+    );
 
   qTicket.beingCoached = true;
 
@@ -266,7 +270,6 @@ export const selectStudent = async (dashT, emoji, msgReact) => {
   queuePoolEntry.startedCoaching = Date.now();
   await queuePoolEntry.save();
 
-  // TODO : Check whether updateAllDashboards calls the database
   console.log('Selected student');
 };
 
@@ -279,6 +282,11 @@ export const finishedCoachingStudent = async (dTicket, msgReact) => {
   const qTicket = QUEUE_POOL[dTicket.studentQTicketID];
   if (!qTicket?.student) return console.log('No student to uncoach');
 
+  if (qTicket.pendingDeletion)
+    return console.log(
+      "sent `successfulCoaching` already, don't need to continue executing `finishedCoachingStudent`"
+    );
+  qTicket.pendingDeletion = true;
   const coachDm = qTicket.coach.dmChannel;
 
   // Ask user whether coaching has succeeded.
