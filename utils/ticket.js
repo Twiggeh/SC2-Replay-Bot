@@ -70,6 +70,7 @@
  * @prop {number} startedCoaching - Date.now() of when the student started to be coached
  * @prop {boolean} beingCoached - If the ticket is being coached right now.
  * @prop {boolean} pendingDeletion - If the student still needs to react to the satisfied message.
+ * @prop {boolean} wrongStudent - If the coach has selected a wrong student.
  * @typedef {Ticket & Q} Q_Ticket */
 
 /**@typedef {Object} D_Ticket

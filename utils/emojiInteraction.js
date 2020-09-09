@@ -52,8 +52,10 @@ export const onAddHelper = (ticket, emoji, assignee, emojiGroup) => {
 };
 
 /** @param {MessageReaction} msgReact @returns {string} Name or ID of the emoji */
-export const emojiFromMsgReact = msgReact =>
-  msgReact._emoji.id === null ? msgReact._emoji.name : msgReact._emoji.id;
+export const emojiFromMsgReact = msgReact => {
+  if (!msgReact) return undefined;
+  return msgReact._emoji.id === null ? msgReact._emoji.name : msgReact._emoji.id;
+};
 
 /**@param {Pool} pool
  * @param {MessageReaction} msgReact

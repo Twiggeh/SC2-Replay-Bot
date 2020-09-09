@@ -75,7 +75,8 @@ const updateDashboards = async discordCoaches => {
   const dashboards = (await Promise.allSettled(cache)).map(el => el.value);
   const cache2 = [];
   for (const dashboard of dashboards) {
-    cache.push(dashboard.edit(dashboardMessage(dashboard.channel.recipient)));
+    const [curPage] = getPages(dashboard);
+    cache.push(dashboard.edit(dashboardMessage(dashboard.channel.recipient, curPage)));
   }
   await Promise.allSettled(cache2);
   // TODO : add error handlers on all "allSettled" Promise handlers
@@ -282,15 +283,46 @@ export const finishedCoachingStudent = async (dTicket, msgReact) => {
   const qTicket = QUEUE_POOL[dTicket.studentQTicketID];
   if (!qTicket?.student) return console.log('No student to uncoach');
 
+  if (qTicket.wrongStudent)
+    return console.log('Coach may have selected the wrong student.');
+  if (Date.now() - dTicket.startedCoaching < 2 * 60 * 1000) {
+    qTicket.wrongStudent = true;
+    const answer = await qTicket.coach.send('Did you select the wrong student?');
+    await answer.react('✅');
+    await answer.react('🛑');
+    const reactions = await answer.awaitReactions(
+      (reaction, user) => {
+        return (
+          (reaction._emoji.name === '🛑' || reaction._emoji.name === '✅') && !user.bot
+        );
+      },
+      { max: 1, time: 30 * 1000 }
+    );
+    const reaction = reactions.first();
+    switch (emojiFromMsgReact(reaction)) {
+      case '✅':
+        // unlock the coach id, update the dashboards
+        await delCoachFromQTicket(qTicket);
+        await cleanUpAfterCoaching({ qTicket, dTicket }, undefined, false);
+        answer.delete();
+        qTicket.wrongStudent = false;
+        return;
+      case '🛑':
+        qTicket.wrongStudent = false;
+        // continue
+        break;
+      default:
+        console.log(badEmoji(reaction));
+    }
+  }
+
   if (qTicket.pendingDeletion)
     return console.log(
       "sent `successfulCoaching` already, don't need to continue executing `finishedCoachingStudent`"
     );
   qTicket.pendingDeletion = true;
-  const coachDm = qTicket.coach.dmChannel;
 
   // Ask user whether coaching has succeeded.
-
   const answer = await qTicket.student.send(successfulCoaching);
   /** @type {import('./ticket.js').CL_Ticket} */
   const options = {
@@ -301,7 +333,6 @@ export const finishedCoachingStudent = async (dTicket, msgReact) => {
     studentQTicketID: dTicket.studentQTicketID,
   };
   await buildTicket(COACHLOG_POOL, options);
-
   await answer.react('✅');
   await answer.react('🛑');
 
@@ -313,6 +344,11 @@ export const finishedCoachingStudent = async (dTicket, msgReact) => {
   await qPoolEntry.save();
   await sleep(5000);
 
+  if (!qTicket.coach)
+    return console.log(
+      'No coach found, am not deleting all messages of coach.`finishedCoachingStudent`'
+    );
+  const coachDm = qTicket.coach.dmChannel;
   delAllMsgs({ DMChannels: coachDm });
 
   console.log('Finished Coaching');
@@ -342,9 +378,11 @@ import { dashboardMessage, successfulCoaching, studentMessage } from '../message
 import { getDBCoach } from './coach.js';
 import { client } from '../app.js';
 import { numberIdent, emojiIdent, reqDashEmojis } from '../Emojis.js';
-import { delAllMsgs, filterNum, sleep } from './utils.js';
+import { delAllMsgs, filterNum, sleep, badEmoji } from './utils.js';
 import { Message, User as DiscordUser } from 'discord.js';
 import { DASHBOARD_POOL, QUEUE_POOL, COACHLOG_POOL } from '../init.js';
 import { buildTicket } from './ticket.js';
 import Queue_PoolEntry from '../Models/Queue_Pool.js';
 import { updateQueuePool } from './pool.js';
+import { emojiFromMsgReact } from './emojiInteraction.js';
+import { cleanUpAfterCoaching, delCoachFromQTicket } from './coachlog.js';

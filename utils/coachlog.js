@@ -63,7 +63,26 @@ export const createCLTOpts = clTicket => {
   };
 };
 
-/** @param {import('./utils/ticket.js').CL_Ticket} clTicket
+/**
+ * @param {import('./ticket.js').Q_Ticket} qTicket
+ */
+export const delCoachFromQTicket = async qTicket => {
+  qTicket.startedCoaching = undefined;
+  qTicket.coach = undefined;
+  qTicket.activatedAt = Date.now();
+  qTicket.emergency = false;
+  qTicket.pendingDeletion = false;
+
+  updateQueuePool();
+  /** @type {import('./Models/Queue_Pool.js').QPE_Opts} */
+  const qPoolEntry = await Queue_PoolEntry.findOne({ id: qTicket.id });
+  qPoolEntry.coachID = undefined;
+  qPoolEntry.startedCoaching = undefined;
+  qPoolEntry.activatedAt = Date.now();
+  await qPoolEntry.save();
+};
+
+/** @param {import('./ticket.js').CL_Ticket} clTicket
  * @param {MessageReaction} msgReact
  */
 export const handleAfterCoachingInter = async (clTicket, emoji, msgReact) => {
@@ -77,18 +96,7 @@ export const handleAfterCoachingInter = async (clTicket, emoji, msgReact) => {
       break;
     }
     case '🛑': {
-      qTicket.startedCoaching = undefined;
-      qTicket.coach = undefined;
-      qTicket.activatedAt = Date.now();
-      qTicket.emergency = false;
-
-      /** @type {import('./Models/Queue_Pool.js').QPE_Opts} */
-      const qPoolEntry = await Queue_PoolEntry.findOne({ id: qTicket.id });
-      qPoolEntry.coachID = undefined;
-      qPoolEntry.startedCoaching = undefined;
-      qPoolEntry.activatedAt = Date.now();
-      await qPoolEntry.save();
-
+      await delCoachFromQTicket(qTicket);
       cltOpts.success = false;
       await msgReact.message.channel.send(queueRecycle(cltOpts));
       break;
