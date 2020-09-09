@@ -1,6 +1,8 @@
-const allCoachIds = ['145856913014259712'];
-// TODO : Put into provider
 const MAX_TIMEOUT_QUEUE_POOL = 30 * 60 * 1000;
+
+setInterval(() => {
+  updateAllDashboards();
+}, 5 * 60 * 1000);
 
 /**
  * @typedef {Object.<string, import('./utils/ticket.js').Q_Ticket>} TQUEUE_POOL_SCHEM
@@ -87,7 +89,7 @@ registerEmojiInteraction(DESCRIPTION_POOL, {
 
 const init = async () => {
   // LOAD COACHES
-  const initCache = [getDashboards(allCoachIds), Queue_PoolEntry.find({})];
+  const initCache = [getDashboards(await getCoaches()), Queue_PoolEntry.find({})];
 
   /** @type {[{value: Message[]}, {value: import('./Models/Queue_Pool.js').QPE_Opts[]}]} */
   const [resMessages, { value: allQueueEntries }] = await Promise.allSettled(initCache);
@@ -186,5 +188,6 @@ import Discord, { Message } from 'discord.js';
 import { client } from './app.js';
 import { handleAfterCoachingInter } from './utils/coachlog.js';
 import { handleAddDesc } from './utils/description.js';
+import { getCoaches } from './provider/provider.js';
 
 export default init;

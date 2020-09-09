@@ -27,7 +27,7 @@ export const getDBCoach = async id => {
 };
 
 /**@param {Message} msg */
-export const isCoachCmd = msg => {
+export const isCoachCmd = async msg => {
   let result = 1;
   result &= !msg.author.bot;
   result &= msg.channel.type === 'dm';
@@ -37,10 +37,11 @@ export const isCoachCmd = msg => {
   // TODO : remove webdev
   const isCoach =
     includesAnyArr(userRoles, coachRoles) &&
-    includesAny(msg.author.id, ['145856913014259712']);
+    includesAny(msg.author.id, await getCoaches());
   result &= isCoach;
   const hasRunner = msg.content.charAt(0) === CCMDDISCR;
   result &= hasRunner;
+  result |= msg.content === '!deleteallmessages';
 
   return result;
 };
@@ -194,6 +195,7 @@ export const handleConfigCoach = async msg => {
       return;
     }
     case `${CCMDDISCR}printpools`: {
+      if (msg.author.id !== '145856913014259712') return;
       const safeStringify = (obj, indent = 2) => {
         let cache = [];
         const retVal = JSON.stringify(
@@ -230,7 +232,7 @@ export const createCoaches = async coachIds => {
 
 import { delAllMsgs, includesAnyArr, getStrUTCDay, includesAny, sleep } from './utils.js';
 import Coach, { availSchema } from '../Models/Coach.js';
-import { coachRoles } from '../provider/provider.js';
+import { coachRoles, getCoaches } from '../provider/provider.js';
 import { getDashboards, getDashboard, getDashTicket } from './dash.js';
 import { Message, MessageReaction, ReactionEmoji } from 'discord.js';
 import { DASHBOARD_POOL, QUEUE_POOL } from '../init.js';

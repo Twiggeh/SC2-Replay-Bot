@@ -83,11 +83,9 @@ const updateDashboards = async discordCoaches => {
 };
 
 export const updateAllDashboards = async () => {
-  // TODO PUT INTO A PROVIDER
-  const allCoaches = ['145856913014259712'];
   const cache = [];
-
-  allCoaches.forEach(id => cache.push(client.users.fetch(id)));
+  const res = await getCoaches();
+  res.forEach(id => cache.push(client.users.fetch(id)));
   const discordCoaches = (await Promise.allSettled(cache)).map(el => el.value);
 
   await updateDashboards(discordCoaches);
@@ -386,3 +384,4 @@ import Queue_PoolEntry from '../Models/Queue_Pool.js';
 import { updateQueuePool } from './pool.js';
 import { emojiFromMsgReact } from './emojiInteraction.js';
 import { cleanUpAfterCoaching, delCoachFromQTicket } from './coachlog.js';
+import { getCoaches } from '../provider/provider.js';

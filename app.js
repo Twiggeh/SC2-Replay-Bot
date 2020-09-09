@@ -22,7 +22,6 @@ mongoose.connect(mongoDbKey, {
 
 (async () => {
   await loginLock.p;
-  // const allCoaches = await getCoaches();
   await init();
 
   client.on('messageReactionAdd', async (msgReact, user) => {
@@ -142,7 +141,7 @@ mongoose.connect(mongoDbKey, {
   });
 
   client.on('message', async msg => {
-    if (isCoachCmd(msg)) {
+    if (await isCoachCmd(msg)) {
       handleConfigCoach(msg);
       return;
     }
@@ -171,7 +170,6 @@ mongoose.connect(mongoDbKey, {
 
 import init, {
   DATA_VALIDATION_POOL,
-  QUEUE_POOL,
   IS_REPLAY_POOL,
   DASHBOARD_POOL,
   COACHLOG_POOL,
@@ -203,10 +201,10 @@ import {
   shouldHandleReact,
   handleDescription,
 } from './utils/utils.js';
-import { whichDataPresent, getMsgAttachments, buildTicket } from './utils/ticket.js';
+import { whichDataPresent, getMsgAttachments } from './utils/ticket.js';
 import { newInterruptRunner } from './utils/interruptRunner.js';
 import { handleConfigCoach, isCoachCmd } from './utils/coach.js';
-import { isPartOfPool, POOLS, updateQueuePool } from './utils/pool.js';
+import { isPartOfPool, POOLS } from './utils/pool.js';
 import { DATA_FLOW } from './provider/dataFlow.js';
 import { allEmojis, DashEmojis } from './Emojis.js';
 import { isNotSC2Replay } from './messages.js';

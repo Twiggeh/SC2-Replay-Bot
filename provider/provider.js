@@ -9,9 +9,7 @@ export const ingestDataFromFile = async fileName =>
 const zergQuery = ['ZergCoach', '556487007535366174'];
 const tossQuery = ['TossCoach', '556487013818302464'];
 const terQuery = ['TerCoach', '556487011066707968'];
-const coachQuery = ['Coach', '546799895840030736', 'AspiringCoach', '552128337766514690'];
 export const coachRoles = [
-  // TODO : put into provider
   '556487007535366174',
   '556487013818302464',
   '556487011066707968',
@@ -20,10 +18,23 @@ export const coachRoles = [
   '598891772499984394', // this is webdev role
   '641682841335496726', // this is the admin role
 ];
+const coachQuery = ['Coach', '546799895840030736', 'AspiringCoach', '552128337766514690'];
+
+let lastRetrieved;
+if (lastRetrieved === undefined) lastRetrieved = Date.now();
+let memoizedIds;
 
 export const getCoaches = async (
   { zer = false, tos = false, ter = false, allCoach = false } = { allCoach: true }
 ) => {
+  if (memoizedIds !== undefined && lastRetrieved - Date.now() < 15 * 60 * 1000) {
+    console.log(
+      `Have to wait for ${
+        15 * 60 * 1000 - lastRetrieved + Date.now()
+      } before I will fetch new coaches`
+    );
+    return memoizedIds;
+  }
   const finalQuery = [];
   (() => {
     if (allCoach) return finalQuery.push(...coachQuery);
@@ -45,7 +56,8 @@ export const getCoaches = async (
     });
     offlineMembers.on('close', code => {
       if (code !== 0) rej(code);
-      res(result.filter(i => !!i));
+      memoizedIds = result.filter(i => !!i);
+      res(memoizedIds);
     });
   });
 };
