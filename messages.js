@@ -101,7 +101,7 @@ export const dashboardMessage = (discordCoach, page = 1, maxEl = 5) => {
    * @prop {string} vsRace - Race of the Opponent
    * @prop {string} rank - Rank of the Student
    * @prop {string} waitingFor - How long the user has been waiting for to be coached
-   * @prop {string} beingCoached - The coach actively coaching the user.
+   * @prop {string} coachedBy - The coach actively coaching the user.
    */
 
   /** Builds the table representation of the students that are waiting to be coached.
@@ -120,7 +120,7 @@ export const dashboardMessage = (discordCoach, page = 1, maxEl = 5) => {
       rank: undefined,
       vsRace: undefined,
       waitingFor: undefined,
-      beingCoached: undefined,
+      coachedBy: undefined,
     };
     for (let key in longestDataStr) {
       longestDataStr[key] = key.length;
@@ -137,8 +137,8 @@ export const dashboardMessage = (discordCoach, page = 1, maxEl = 5) => {
       const race = ticket.race;
       const rank = ticket.rank;
       const vsRace = vsRaceEmojis[ticket.vsRace].id;
-      const beingCoached =
-        ticket?.coach?.username === undefined && !ticket.beingCoached
+      const coachedBy =
+        ticket?.coach?.username === undefined && !ticket.coachedBy
           ? ' - '
           : ticket?.coach?.username;
       const minsElapsed = Math.floor((Date.now() - ticket.activatedAt) / 1000) / 60;
@@ -161,7 +161,7 @@ export const dashboardMessage = (discordCoach, page = 1, maxEl = 5) => {
         rank: String(rank),
         vsRace: String(vsRace),
         waitingFor: String(waitingFor),
-        beingCoached: String(beingCoached),
+        coachedBy: String(coachedBy),
       };
       for (let key in longestDataStr) {
         let renderDataLength = renderData[ticket.emojiIdentifier][key].length;
