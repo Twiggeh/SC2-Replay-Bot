@@ -46,8 +46,7 @@ export const getCoaches = async (
   // prettier-ignore
   const args = [ 'app', 'tUser', 'tAmount', 'tTitle', 'tPrettyPrint', 'tPrintUserId', 'sRole', JSON.stringify(finalQuery)];
   const offlineMembers = spawn('node', args, {
-    cwd:
-      '/run/media/twiggeh/Storage/projects/Webdev/Work/SC2 Replay Bot/OfflineMembersBot',
+    cwd: process.cwd() + '/OfflineMembersBot',
   });
   return new Promise((res, rej) => {
     const result = [];
