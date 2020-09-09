@@ -36,7 +36,7 @@ export const isCoachCmd = async msg => {
     ._roles;
   // TODO : remove webdev
   const isCoach =
-    includesAnyArr(userRoles, coachRoles) &&
+    includesAnyArr(userRoles, coachRoles) ||
     includesAny(msg.author.id, await getCoaches());
   result &= isCoach;
   const hasRunner = msg.content.charAt(0) === CCMDDISCR;
