@@ -2,13 +2,22 @@ const allCoachIds = ['145856913014259712'];
 // TODO : Put into provider
 const MAX_TIMEOUT_QUEUE_POOL = 30 * 60 * 1000;
 
+/**
+ * @typedef {Object.<string, import('./utils/ticket.js').Q_Ticket>} TQUEUE_POOL_SCHEM
+ * @typedef {{getSortedKeys: function()=>void}} getSortedKeys - Returns sorted keys
+ * @typedef {TQUEUE_POOL_SCHEM & getSortedKeys} TQUEUE_POOL
+ */
+
 // CREATE POOLS
 /** @type {Object.<string, import('./utils/ticket.js').IR_Ticket>} */
 export const IS_REPLAY_POOL = createPool('IS_REPLAY_POOL');
 /** @type {Object.<string, import('./utils/ticket.js').DV_Ticket>} */
 export const DATA_VALIDATION_POOL = createPool('DATA_VALIDATION_POOL');
-/** @type {Object.<string, import('./utils/ticket.js').Q_Ticket>} */
-export const QUEUE_POOL = createPool('QUEUE_POOL');
+/** @type {TQUEUE_POOL} */
+export const QUEUE_POOL = createPool('QUEUE_POOL', [
+  'getSortedKeys',
+  () => updateQueuePool(),
+]);
 /** @type {Object.<string, import('./utils/ticket.js').D_Ticket>} */
 export const DASHBOARD_POOL = createPool('DASHBOARD_POOL');
 /** @type {Object.<string, import('./utils/ticket.js').CL_Ticket>} */

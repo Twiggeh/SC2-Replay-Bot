@@ -67,7 +67,7 @@ export const missingDataFail = {
  * @return {String}
  */
 export const dashboardMessage = (discordCoach, page = 1, maxEl = 5) => {
-  const QUEUE_POOL_KEYS = Object.keys(QUEUE_POOL);
+  const QUEUE_POOL_KEYS = QUEUE_POOL.getSortedKeys();
   // local copy of QUEUE_POOL, so that it is easier to paginate.
   const _QUEUE_POOL = {};
   for (

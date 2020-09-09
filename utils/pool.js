@@ -5,12 +5,15 @@
 /**  @type {Object<string, Pool> } */
 export const POOLS = {};
 
-/** @param {string} name - Unique name of the pool @returns {Pool}*/
-export const createPool = (name, methods) => {
+/**
+ * @param {string} name - Unique name of the pool
+ * @param {Array[string, any]} props - Properties that should be on the prototype
+ * @returns {Pool}*/
+export const createPool = (name, props) => {
   class Pool {}
-  if (methods)
-    for (let method in methods) {
-      Pool.prototype[method] = methods[method];
+  if (props)
+    for (let i = 0; i < props.length; i += 2) {
+      Pool.prototype[props[i]] = props[i + 1];
     }
   const result = new Pool();
   POOLS[name] = result;
@@ -60,15 +63,20 @@ export const updateQueuePool = () => {
     if (qPTicket.coach === undefined) needCoachSort.push(qPTicket);
     else beingCoached.push(qPTicket);
   }
+  const queueKeys = [];
   needCoachSort.sort((a, b) => a.activatedAt - b.activatedAt);
-  needCoachSort.forEach((el, i) => (el.emojiIdentifier = i + 1));
+  needCoachSort.forEach((el, i) => {
+    el.emojiIdentifier = i + 1;
+    queueKeys.push(el.id);
+  });
 
   beingCoached.sort((a, b) => a.activatedAt - b.activatedAt);
-  beingCoached.forEach(
-    (el, i) =>
-      (el.emojiIdentifier =
-        Math.max(5 - needCoachSort.length, 0) + needCoachSort.length + i + 1)
-  );
+  beingCoached.forEach((el, i) => {
+    el.emojiIdentifier =
+      Math.max(5 - needCoachSort.length, 0) + needCoachSort.length + i + 1;
+    queueKeys.push(el.id);
+  });
+  return queueKeys;
 };
 
 import { timeOutHandler } from './ticket.js';
