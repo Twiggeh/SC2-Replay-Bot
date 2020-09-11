@@ -30,7 +30,7 @@ export const getCoaches = async (
   if (memoizedIds !== undefined && lastRetrieved - Date.now() < 15 * 60 * 1000) {
     console.log(
       `Have to wait for ${
-        15 * 60 * 1000 - lastRetrieved + Date.now()
+      15 * 60 * 1000 - lastRetrieved + Date.now()
       } before I will fetch new coaches`
     );
     return memoizedIds;
@@ -44,10 +44,11 @@ export const getCoaches = async (
   })();
 
   // prettier-ignore
-  const args = [ 'app', 'tUser', 'tAmount', 'tTitle', 'tPrettyPrint', 'tPrintUserId', 'sRole', JSON.stringify(finalQuery)];
+  const args = ['app', 'tUser', 'tAmount', 'tTitle', 'tPrettyPrint', 'tPrintUserId', 'sRole', JSON.stringify(finalQuery)];
   const offlineMembers = spawn('node', args, {
     cwd: process.cwd() + '/OfflineMembersBot',
   });
+
   return new Promise((res, rej) => {
     const result = [];
     offlineMembers.stdout.on('data', data => {
