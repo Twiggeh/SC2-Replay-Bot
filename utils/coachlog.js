@@ -65,11 +65,12 @@ export const createCLTOpts = clTicket => {
 
 /**
  * @param {import('./ticket.js').Q_Ticket} qTicket
+ * @param {boolean} resetTime - If the activatedAt should be reset
  */
-export const delCoachFromQTicket = async qTicket => {
+export const delCoachFromQTicket = async (qTicket, resetTime) => {
   qTicket.startedCoaching = undefined;
   qTicket.coach = undefined;
-  qTicket.activatedAt = Date.now();
+  if (resetTime) qTicket.activatedAt = Date.now();
   qTicket.emergency = false;
   qTicket.pendingDeletion = false;
 
@@ -96,7 +97,7 @@ export const handleAfterCoachingInter = async (clTicket, emoji, msgReact) => {
       break;
     }
     case '🛑': {
-      await delCoachFromQTicket(qTicket);
+      await delCoachFromQTicket(qTicket, true);
       cltOpts.success = false;
       await msgReact.message.channel.send(queueRecycle(cltOpts));
       break;

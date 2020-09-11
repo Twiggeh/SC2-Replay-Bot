@@ -218,10 +218,6 @@ export const goToPrevPage = (dashTicket, emoji, msgReact) => {
 export const selectStudent = async (dashT, emoji, msgReact) => {
   if (dashT.studentQTicketID)
     return console.log('Cannot coach more than one student at once');
-  // TODO:
-  // Wait for at least 2 mins => if aborted, ask if was an actual coaching attempt.
-  // |=> If yes fast forward to asking the coach and student about the experience. Collect data
-  //
 
   const QUEUE_KEYS = Object.keys(QUEUE_POOL);
   const numIdent =
@@ -239,11 +235,10 @@ export const selectStudent = async (dashT, emoji, msgReact) => {
     return console.log(
       'Student has not selected whether the coaching experience was satisfactory. Did not proceed with `selectStudent`'
     );
-
-  qTicket.beingCoached = true;
-
   // don't allow other coaches to select this student
   if (qTicket.coach) return console.log('Already being coached');
+
+  qTicket.beingCoached = true;
 
   // Mark the student as being coached
   qTicket.coach = msgReact.message.channel.recipient;
@@ -300,7 +295,7 @@ export const finishedCoachingStudent = async (dTicket, msgReact) => {
     switch (emojiFromMsgReact(reaction)) {
       case '✅':
         // unlock the coach id, update the dashboards
-        await delCoachFromQTicket(qTicket);
+        await delCoachFromQTicket(qTicket, false);
         await cleanUpAfterCoaching({ qTicket, dTicket }, undefined, false);
         answer.delete();
         qTicket.wrongStudent = false;

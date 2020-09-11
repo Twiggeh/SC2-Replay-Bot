@@ -87,10 +87,10 @@ export const dashboardMessage = (discordCoach, page = 1, maxEl = 5) => {
     const qLength = QUEUE_POOL_KEYS.length;
     return `Currently there ${
       qLength === 0
-        ? 'are no students'
+        ? 'are no replays'
         : qLength === 1
-        ? 'is one student'
-        : `are ${qLength} students`
+        ? 'is one replay'
+        : `are ${qLength} replays`
     } to coach.`;
   };
 
