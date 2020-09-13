@@ -161,6 +161,7 @@ mongoose.connect(mongoDbKey, {
         ],
       });
       if (aborted) return;
+      // TODO : put push to database and queuepool in here
       await handlePushToCoaches();
     } catch (e) {
       console.error(new Error(e));

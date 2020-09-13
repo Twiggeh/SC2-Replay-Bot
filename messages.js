@@ -136,7 +136,7 @@ export const dashboardMessage = (discordCoach, page = 1, maxEl = 5) => {
       const name = ticket.student.username;
       const race = ticket.race;
       const rank = ticket.rank;
-      const vsRace = vsRaceEmojis[ticket.vsRace].id;
+      const vsRace = vsRaceEmojis[ticket.vsRace]?.id;
       const coachedBy =
         ticket?.coach?.username === undefined && !ticket.coachedBy
           ? ' - '

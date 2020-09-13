@@ -128,7 +128,6 @@ const init = async () => {
     // if (qPEntries.length === 0) return;
   });
 
-  // each queuepool
   qPEntries.forEach(qPEntry =>
     userFetchCache.push(
       (async () => {
