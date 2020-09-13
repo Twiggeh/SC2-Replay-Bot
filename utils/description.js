@@ -26,13 +26,7 @@ export const handleAddDesc = async (ticket, emoji, msgReact) => {
       return badEmoji(msgReact);
   }
 
-  let dvTicket;
-  /** @type {import('./ticket').DV_Ticket} */
-  const DATA_VALIDATION_POOL_KEYS = Object.keys(DATA_VALIDATION_POOL);
-  for (let key of DATA_VALIDATION_POOL_KEYS) {
-    if (DATA_VALIDATION_POOL[key].origMsg.author.id === getRecipId(msgReact))
-      dvTicket = DATA_VALIDATION_POOL[key];
-  }
+  const dvTicket = getDVTicket(getRecipId(msgReact));
 
   if (!dvTicket) {
     msgReact.message.channel.recipient.send('Could not find dvTicket in handleAddDesc');
@@ -57,11 +51,11 @@ export const handleAddDesc = async (ticket, emoji, msgReact) => {
   );
 
   delete DATA_VALIDATION_POOL[msgReact.message.id];
-  DATA_FLOW[getRecipId(msgReact)].resolveAll();
   delete DESCRIPTION_POOL[ticket.id];
+  DATA_FLOW[getRecipId(msgReact)].resolveAll();
 };
 
-import { badEmoji, getRecipId, clearTTimeout } from './utils.js';
+import { badEmoji, getRecipId, clearTTimeout, getDVTicket } from './utils.js';
 import { thankYouDesc, okayNoDescription } from '../messages.js';
 import { DESCRIPTION_POOL, QUEUE_POOL, DATA_VALIDATION_POOL } from '../init.js';
 import { DATA_FLOW } from '../provider/dataFlow.js';

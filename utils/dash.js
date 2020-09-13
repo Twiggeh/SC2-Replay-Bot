@@ -202,7 +202,7 @@ export const goToNextPage = (dashTicket, emoji, msgReact) => {
  */
 export const goToPrevPage = (dashTicket, emoji, msgReact) => {
   const msg = msgReact.message;
-  const [curPage, maxPage] = getPages(msg);
+  const [curPage] = getPages(msg);
   if (curPage <= 1) {
     console.log('nowhere to go to ');
     // TODO: Throw error at user.

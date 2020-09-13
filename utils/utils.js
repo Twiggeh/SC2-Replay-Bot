@@ -284,8 +284,30 @@ export const getActualContent = msg => {
  * @param {Message} msg - The message sent in the Discord Server (Original coach request)
  */
 export const handleDescription = async msg => {
-  const [isDesc] = getActualContent(msg);
+  const [isDesc, actualContent] = getActualContent(msg);
   if (isDesc) {
+    const dvTicket = getDVTicket(msg.author.id);
+
+    if (!dvTicket) {
+      msg.author.dmChannel.send('Could not find dvTicket in `handleDescription`');
+      console.log('Could not find dvTicket in handleDescription');
+      return;
+    }
+    await buildTicket(
+      QUEUE_POOL,
+      {
+        id: msg.id,
+        activatedAt: Date.now(),
+        content: actualContent,
+        attachArr: msg.attachArr,
+        race: dvTicket.race,
+        rank: dvTicket.rank,
+        vsRace: dvTicket.vsRace,
+        student: msg.author,
+        url: dvTicket.url,
+      },
+      true
+    );
     DATA_FLOW[msg.author.id].resolveAll();
     return console.log('Message contained a description');
   }
@@ -367,6 +389,19 @@ export const filterNum = str => {
 /** @param {MessageReaction} msgReact */
 export const badEmoji = msgReact =>
   console.log('User tried to provide wrong emote : ' + emojiFromMsgReact(msgReact));
+
+/**
+ * @param {string} studentId
+ */
+export const getDVTicket = studentId => {
+  let index = -1;
+  /** @type {import('./ticket').DV_Ticket} */
+  const DV_POOL_KEYS = Object.keys(DATA_VALIDATION_POOL);
+  for (let i = 0; i < DV_POOL_KEYS.length; i++) {
+    index += DATA_VALIDATION_POOL[DV_POOL_KEYS[i]].origMsg.author.id === studentId;
+  }
+  return DATA_VALIDATION_POOL[DV_POOL_KEYS[index]];
+};
 
 import { updateAllDashboards, date } from './dash.js';
 import {
