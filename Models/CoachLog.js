@@ -14,7 +14,7 @@ const CoachLogEntrySchema = new mongoose.Schema({
   endedCoaching: Number,
   coachRating: { type: Number, max: 10, min: 0, default: 5 },
   studentRating: { type: Number, max: 10, min: 0, default: 5 },
-  success: Boolean,
+  deletedBy: String,
 });
 
 /**
@@ -36,6 +36,7 @@ const CoachLogEntrySchema = new mongoose.Schema({
  * @prop {number} coachRating - Number from 0 - 10, that rates the coach.
  * @prop {number} studentRating - Number from 0 - 10, that rates the student.
  * @prop {boolean} success - If the student wanted to be coached by someone else
+ * @prop {string} deletedBy - The name of the person who deleted the replay
  */
 
 /**

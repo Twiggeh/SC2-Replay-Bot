@@ -186,7 +186,22 @@ export const handleConfigCoach = async msg => {
         return console.log(`could not find qTicket with ID ${emojiId}`);
       if (qTicket.coach)
         return console.log('Cannot remove a replay if it is already being coached.');
-
+      const clEntry = new CoachLogEntry({
+        activatedAt: qTicket.activatedAt,
+        deletedBy: msg.author.username,
+        endedCoaching: 0,
+        race: qTicket.race,
+        vsRace: qTicket.vsRace,
+        rank: qTicket.rank,
+        startedCoaching: 0,
+        studentID: qTicket.student.id,
+        studentName: qTicket.student.username,
+        success: false,
+        url: qTicket.url,
+        attachArr: qTicket.attachArr,
+        content: qTicket.content,
+      });
+      clEntry.save();
       await cleanUpAfterCoaching({
         id: 123,
         dTicket: { id: dash.id },
@@ -234,11 +249,11 @@ import { delAllMsgs, includesAnyArr, getStrUTCDay, includesAny, sleep } from './
 import Coach, { availSchema } from '../Models/Coach.js';
 import { coachRoles, getCoaches } from '../provider/provider.js';
 import { getDashboards, getDashboard, getDashTicket } from './dash.js';
-import { Message, MessageReaction, ReactionEmoji } from 'discord.js';
-import { DASHBOARD_POOL, QUEUE_POOL } from '../init.js';
+import { Message, MessageReaction } from 'discord.js';
+import { QUEUE_POOL } from '../init.js';
 import { freeEmojiInterWGroup, lockEmojiInterWGroup } from './emojiInteraction.js';
 import { cleanUpAfterCoaching } from './coachlog.js';
-import { studentMessage } from '../messages.js';
 import { client } from '../app.js';
 import { promises as fs } from 'fs';
 import { POOLS } from './pool.js';
+import CoachLogEntry from '../Models/CoachLog.js';
