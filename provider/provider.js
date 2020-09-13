@@ -27,10 +27,10 @@ let memoizedIds;
 export const getCoaches = async (
   { zer = false, tos = false, ter = false, allCoach = false } = { allCoach: true }
 ) => {
-  if (memoizedIds !== undefined && lastRetrieved - Date.now() < 15 * 60 * 1000) {
+  if (memoizedIds !== undefined && Date.now() - lastRetrieved < 15 * 60 * 1000) {
     console.log(
       `Have to wait for ${
-      15 * 60 * 1000 - lastRetrieved + Date.now()
+      15 * 60 * 1000 - Date.now() + lastRetrieved
       } before I will fetch new coaches`
     );
     return memoizedIds;
