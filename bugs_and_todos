@@ -1,0 +1,14 @@
+## Non Reproducible ones
+
+- A coach can lock themselves out, they won't be coaching a student, but will be displayed as coaching a student
+
+
+## Reproducible ones
+
+- Replay without data will not be ingested (leaving stuff blank)
+
+
+## TODO
+
+- Figure out how to test a Discord bot.
+- Add time to uuid in Math.floor(Math.random())
