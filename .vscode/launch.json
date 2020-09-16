@@ -15,6 +15,20 @@
       "console": "integratedTerminal",
       "restart": true,
       "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Attach to Replay Bot",
+      "port": 9229,
+      "request": "attach",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "pwa-node"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Start and attach to Replay Bot",
+      "configurations": ["Attach to Replay Bot"],
+      "preLaunchTask": "Inspect Discord.JS Bot"
     }
   ]
 }
