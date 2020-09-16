@@ -76,7 +76,6 @@ export const getCoaches = async (
       15 * 60 * 1000 - Date.now() + lastRetrieved
     } before I will fetch new coaches`
   );
-  console.log('memoizedIds', memoizedIds);
   return memoizedIds;
 };
 
