@@ -230,7 +230,7 @@ export const handleMissingData = async (msg, playingAgainst, playingAs, rank, ur
     // create a "fake ticket" so that the description collector can access the data
     const ticket = await buildTicket(DATA_VALIDATION_POOL, {
       attachArr: msg.attachments,
-      id: Math.floor(Math.random() * 1000000000) + '',
+      id: (Date.now() + '').substring(4) + Math.floor(Math.random() * 1000000000),
       content: msg.content,
       url,
       origMsg: msg,
