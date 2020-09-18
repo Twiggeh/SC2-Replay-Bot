@@ -50,7 +50,7 @@ export const handleAddDesc = async (ticket, emoji, msgReact) => {
     true
   );
 
-  delete DATA_VALIDATION_POOL[msgReact.message.id];
+  delete DATA_VALIDATION_POOL[dvTicket.id];
   delete DESCRIPTION_POOL[ticket.id];
   DATA_FLOW[getRecipId(msgReact)].resolveAll();
 };
