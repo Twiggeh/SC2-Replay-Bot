@@ -114,7 +114,7 @@ export const handleConfIsReplay = async (isReplay, msg, url) => {
 // TODO : Add available coaches as a parameter to SC2Replay and handleConfirmation
 /** @param {Message} msg*/
 export const handleConfirmation = async msg => {
-  await msg.author.send(isSC2Replay(1));
+  await msg.author.send(isSC2Replay(getInaccurateCoaches().length));
   updateQueuePool();
   updateAllDashboards();
   await sleep(10 * 1000);
@@ -436,3 +436,4 @@ import {
 } from '../config/global.js';
 import { delFromAllPools, updateQueuePool } from './pool.js';
 import { emojiFromMsgReact } from './emojiInteraction.js';
+import { getInaccurateCoaches } from '../provider/provider.js';

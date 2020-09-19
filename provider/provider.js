@@ -16,6 +16,8 @@ let lastRetrieved = 0;
 let memoizedIds = [];
 let fetching = false;
 
+export const getInaccurateCoaches = () => memoizedIds;
+
 export const getCoaches = async (
   { zer = false, tos = false, ter = false, allCoach = false } = { allCoach: true }
 ) => {
