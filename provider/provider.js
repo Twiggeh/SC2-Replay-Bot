@@ -1,17 +1,3 @@
-const zergQuery = ['ZergCoach', '556487007535366174'];
-const tossQuery = ['TossCoach', '556487013818302464'];
-const terQuery = ['TerCoach', '556487011066707968'];
-export const coachRoles = [
-  '556487007535366174',
-  '556487013818302464',
-  '556487011066707968',
-  '546799895840030736',
-  '552128337766514690',
-  '598891772499984394', // this is webdev role
-  '641682841335496726', // this is the admin role
-];
-const coachQuery = ['Coach', '546799895840030736', 'AspiringCoach', '552128337766514690'];
-
 let lastRetrieved = 0;
 let memoizedIds = [];
 let fetching = false;
@@ -82,3 +68,4 @@ export const getCoaches = async (
 };
 
 import { spawn } from 'child_process';
+import { coachQuery, terQuery, tossQuery, zergQuery } from '../config/global';

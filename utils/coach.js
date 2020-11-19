@@ -247,7 +247,7 @@ export const createCoaches = async coachIds => {
 
 import { delAllMsgs, includesAnyArr, getStrUTCDay, includesAny, sleep } from './utils.js';
 import Coach, { availSchema } from '../Models/Coach.js';
-import { coachRoles, getCoaches } from '../provider/provider.js';
+import { getCoaches } from '../provider/provider.js';
 import { getDashboards, getDashboard, getDashTicket } from './dash.js';
 import { Message, MessageReaction } from 'discord.js';
 import { QUEUE_POOL } from '../init.js';
@@ -257,3 +257,4 @@ import { client } from '../app.js';
 import { promises as fs } from 'fs';
 import { POOLS } from './pool.js';
 import CoachLogEntry from '../Models/CoachLog.js';
+import { coachRoles } from '../config/global.js';

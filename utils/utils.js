@@ -9,7 +9,7 @@ export const shouldHandleMsg = msg => {
   let result = 1;
   result &= !msg.author.bot;
   result &= msg.attachments !== undefined;
-  result &= msg.channel.name === 'replays-1' || msg.channel.name === 'replays-2';
+  result &= msg.channel.name === channel0 || msg.channel.name === channel1;
   return result;
 };
 
@@ -433,6 +433,8 @@ import {
   gRankCuts,
   pRankCuts,
   dRankCuts,
+  channel0,
+  channel1,
 } from '../config/global.js';
 import { delFromAllPools, updateQueuePool } from './pool.js';
 import { emojiFromMsgReact } from './emojiInteraction.js';
